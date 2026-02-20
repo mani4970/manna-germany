@@ -1,54 +1,103 @@
-import { useEffect, useRef, useState } from 'react'
-import { getTypeLabel } from '../placeTypes'
+import { useState, useEffect, useRef } from 'react'
 import { C, MannaDots } from './LandingPage'
 
-export default function FinalCourse({ selections, onRestart, onBack, directInputOrder }) {
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null
+  const toRad = x => (x * Math.PI) / 180
+  const R = 6371000
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2
+  return Math.round(2 * R * Math.asin(Math.sqrt(a)))
+}
+
+function getTypeLabel(type) {
+  const map = {
+    restaurant: '🍽️', cafe: '☕', bar: '🍺', bakery: '🥐',
+    food: '🍴', meal_takeaway: '🥡', night_club: '🎵',
+  }
+  return map[type] || ''
+}
+
+export default function FinalCourse({ selections, lang, L, onRestart, onBack, directInputOrder }) {
   const mapRef = useRef(null)
   const [walkingTimes, setWalkingTimes] = useState([])
   const [nearestStation, setNearestStation] = useState(null)
+  const [linkCopied, setLinkCopied] = useState(false)
+
+  const { restaurant, cafe, cafe2, hotspot, city, occasion, courseOrder = [] } = selections
+
+  const orderedPlaces = directInputOrder
+    ? directInputOrder.map(t => {
+        if (t === 'restaurant') return restaurant
+        if (t === 'cafe') return cafe
+        if (t === 'bar') return cafe2
+        return null
+      }).filter(Boolean)
+    : courseOrder.map(t => {
+        if (t === 'restaurant') return restaurant
+        if (t === 'cafe') return cafe
+        if (t === 'bar') return cafe2
+        return null
+      }).filter(Boolean)
+
+  const orderedIcons = orderedPlaces.map(p => {
+    const t = p?.primaryType || ''
+    if (t.includes('cafe') || t.includes('bakery')) return '☕'
+    if (t.includes('bar') || t.includes('night')) return '🍺'
+    return '🍽️'
+  })
 
   useEffect(() => {
-    function initMap() {
-      const places = [selections.restaurant, selections.cafe, selections.cafe2].filter(Boolean)
-      if (places.length === 0 || !mapRef.current) return
+    // Walking times between places
+    const times = []
+    for (let i = 0; i < orderedPlaces.length - 1; i++) {
+      const a = orderedPlaces[i], b = orderedPlaces[i+1]
+      if (a?.lat && b?.lat) {
+        const dist = haversineDistance(a.lat, a.lng, b.lat, b.lng)
+        if (dist) times.push({ dist, mins: Math.round(dist / 80) })
+        else times.push(null)
+      } else times.push(null)
+    }
+    setWalkingTimes(times)
 
-      const center = new window.kakao.maps.LatLng(places[0].lat, places[0].lng)
-      const map = new window.kakao.maps.Map(mapRef.current, { center, level: 4 })
-
-      const icons = ['🍽️', '☕', '🍺']
-      places.forEach((place, idx) => {
-        new window.kakao.maps.InfoWindow({
-          content: '<div style="padding:6px 10px;font-size:13px;font-weight:700;color:#B89A6A">' + icons[idx] + ' ' + place.name + '</div>'
-        }).open(map, new window.kakao.maps.Marker({
-          position: new window.kakao.maps.LatLng(place.lat, place.lng), map,
-        }))
+    // Google Maps (no Kakao)
+    const initMap = () => {
+      if (!mapRef.current || !window.google) return
+      const places = orderedPlaces.filter(p => p?.lat)
+      if (!places.length) return
+      const center = { lat: places[0].lat, lng: places[0].lng }
+      const map = new window.google.maps.Map(mapRef.current, {
+        center, zoom: 14,
+        mapTypeControl: false, streetViewControl: false,
+        styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }]
       })
-
-      const times = []
-      for (let i = 0; i < places.length - 1; i++) {
-        const p1 = places[i], p2 = places[i + 1]
-        if (p1.lat && p1.lng && p2.lat && p2.lng) {
-          const toRad = x => (x * Math.PI) / 180
-          const R = 6371000
-          const dLat = toRad(p2.lat - p1.lat), dLon = toRad(p2.lng - p1.lng)
-          const a = Math.sin(dLat/2)**2 + Math.cos(toRad(p1.lat)) * Math.cos(toRad(p2.lat)) * Math.sin(dLon/2)**2
-          const dist = Math.round(2 * R * Math.asin(Math.sqrt(a)))
-          times.push({ minutes: Math.ceil(dist / 67), distance: dist < 1000 ? dist + 'm' : (dist / 1000).toFixed(1) + 'km' })
-        } else {
-          times.push(null)
-        }
-      }
-      setWalkingTimes(times)
-
-      const bounds = new window.kakao.maps.LatLngBounds()
-      places.forEach(p => bounds.extend(new window.kakao.maps.LatLng(p.lat, p.lng)))
-      map.setBounds(bounds)
+      places.forEach((p, i) => {
+        new window.google.maps.Marker({
+          position: { lat: p.lat, lng: p.lng },
+          map,
+          label: { text: String(i+1), color: '#fff', fontWeight: 'bold' },
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 14,
+            fillColor: C.gold,
+            fillOpacity: 1,
+            strokeColor: '#fff',
+            strokeWeight: 2,
+          }
+        })
+      })
+    }
+    if (window.google?.maps) initMap()
+    else {
+      const script = document.createElement('script')
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
+      script.onload = initMap
+      document.head.appendChild(script)
     }
 
-    if (window.kakao && window.kakao.maps) window.kakao.maps.load(initMap)
-
-    // 첫 번째 장소 기준 가장 가까운 지하철역 검색
-    const firstPlace = [selections.restaurant, selections.cafe, selections.cafe2].filter(Boolean)[0]
+    // Nearest transit station
+    const firstPlace = orderedPlaces[0]
     if (firstPlace?.lat && firstPlace?.lng) {
       fetch(`/api/places/search?type=subway&lat=${firstPlace.lat}&lng=${firstPlace.lng}`)
         .then(r => r.json())
@@ -57,97 +106,61 @@ export default function FinalCourse({ selections, onRestart, onBack, directInput
     }
   }, [])
 
-  const { restaurant, cafe, cafe2, hotspot, occasion, courseOrder = [] } = selections
-  const orderedPlaces = [], orderedIcons = []
-  const orderToUse = directInputOrder && directInputOrder.length > 0 ? directInputOrder : courseOrder
+  // Share functions
+  const shareUrl = window.location.href
 
-  if (orderToUse.length > 0) {
-    orderToUse.forEach(type => {
-      if (type === 'restaurant' && restaurant && !orderedPlaces.includes(restaurant)) { orderedPlaces.push(restaurant); orderedIcons.push('🍽️') }
-      else if (type === 'cafe' && cafe && !orderedPlaces.includes(cafe)) { orderedPlaces.push(cafe); orderedIcons.push('☕') }
-      else if (type === 'bar') {
-        const barPlace = cafe2 || cafe
-        if (barPlace && !orderedPlaces.includes(barPlace)) { orderedPlaces.push(barPlace); orderedIcons.push('🍺') }
-      }
-    })
-  }
-  if (orderedPlaces.length === 0) {
-    if (restaurant) { orderedPlaces.push(restaurant); orderedIcons.push('🍽️') }
-    if (cafe) { orderedPlaces.push(cafe); orderedIcons.push('☕') }
-    if (cafe2) { orderedPlaces.push(cafe2); orderedIcons.push('🍺') }
+  const shareWhatsApp = () => {
+    const names = orderedPlaces.map((p, i) => `${i+1}. ${p.name}`).join('\n')
+    const cityName = lang === 'de' ? city?.name_de : city?.name_en
+    const text = `🍽️ Manna ${cityName} Tour\n${hotspot ? (lang === 'de' ? hotspot.name_de : hotspot.name_en) || hotspot.name : ''}\n\n${names}\n\n${shareUrl}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
   }
 
-  function handleKakaoShare() {
-    if (!window.Kakao) return
-    if (!window.Kakao.isInitialized()) window.Kakao.init('2785551c281261a2c8d7d214eaad05e8')
-    const shareData = {
-      h: hotspot?.name || '',
-      r: restaurant ? { n: restaurant.name, x: Number(restaurant.lat.toFixed(4)), y: Number(restaurant.lng.toFixed(4)) } : null,
-      c: cafe ? { n: cafe.name, x: Number(cafe.lat.toFixed(4)), y: Number(cafe.lng.toFixed(4)) } : null,
-    }
-    const shareUrl = 'https://manna-seoul.vercel.app?s=' + btoa(unescape(encodeURIComponent(JSON.stringify(shareData))))
-    window.Kakao.Share.sendDefault({
-      objectType: 'feed',
-      content: {
-        title: (hotspot?.name || '서울') + ' 코스 🗺️',
-        description: orderedPlaces.map((p, i) => orderedIcons[i] + ' ' + p.name).join('  →  '),
-        imageUrl: 'https://manna-seoul.vercel.app/og-image.png',
-        link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
-      },
-      buttons: [{ title: '코스 보기 🗺️', link: { mobileWebUrl: shareUrl, webUrl: shareUrl } }],
+  const copyLink = () => {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2500)
     })
   }
+
+  const spotName = lang === 'de' ? hotspot?.name_de : hotspot?.name_en
+  const cityName = lang === 'de' ? city?.name_de : city?.name_en
 
   return (
-    <div style={{ paddingBottom: '40px', background: C.bg, minHeight: '100vh', fontFamily: "'Outfit', 'Noto Sans KR', sans-serif" }}>
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet" />
-      <div style={{ padding: '24px 24px 16px' }}>
-        <div style={{ paddingTop: '20px' }}>
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '24px' }}>
-            {[1,2,3,4,5,6,7].map(i => (
-              <div key={i} style={{ flex: 1, height: '2px', borderRadius: '2px', background: C.gold }} />
-            ))}
-          </div>
+    <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Outfit', sans-serif", paddingBottom: '40px' }}>
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600&display=swap" rel="stylesheet" />
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            {onBack && (
-              <button onClick={onBack} style={{
-                background: 'none', border: 'none', color: C.textSub,
-                fontSize: '14px', cursor: 'pointer', padding: 0,
-                fontFamily: "'Outfit', sans-serif",
-              }}>← 이전으로</button>
-            )}
-            <button onClick={onRestart} style={{
-              background: C.surface2, border: `1px solid ${C.border}`,
-              borderRadius: '8px', padding: '6px 14px',
-              fontSize: '13px', color: C.textSub, cursor: 'pointer',
-              fontFamily: "'Outfit', sans-serif",
-            }}>🏠 처음으로</button>
-          </div>
+      {/* Header */}
+      <div style={{ padding: '0 24px', paddingTop: '48px', paddingBottom: '28px', textAlign: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+          <MannaDots size={8} />
+        </div>
+        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', marginBottom: '20px' }}>
+          {[1,2,3,4,5,6,7].map(i => (
+            <div key={i} style={{ flex: 1, maxWidth: '32px', height: '2px', borderRadius: '2px', background: C.gold }} />
+          ))}
+        </div>
+        <h1 style={{ fontSize: '22px', fontWeight: '300', color: C.text, letterSpacing: '-0.3px' }}>
+          {L.course_done}
+        </h1>
+        <p style={{ color: C.textSub, fontSize: '13px', marginTop: '6px', fontWeight: '300' }}>
+          {cityName && `📍 ${cityName}`}{spotName && ` · ${spotName}`}{occasion && ` · ${occasion}`}
+        </p>
+      </div>
 
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
-              <MannaDots size={8} />
-            </div>
-            <h1 style={{ fontSize: '22px', fontWeight: '300', color: C.text, letterSpacing: '-0.3px' }}>
-              코스 완성
-            </h1>
-            <p style={{ color: C.textSub, fontSize: '13px', marginTop: '6px', fontWeight: '300' }}>
-              {hotspot?.name && `📍 ${hotspot.name}`}{occasion && ` · ${occasion}`}
-            </p>
-
-          </div>
+      {/* Map */}
+      <div style={{ padding: '0 24px', marginBottom: '12px' }}>
+        <div ref={mapRef} style={{
+          width: '100%', height: '240px', borderRadius: '14px',
+          border: `1px solid ${C.border}`, background: C.surface2,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: C.textDim, fontSize: '13px',
+        }}>
+          Loading map...
         </div>
       </div>
 
-      <div style={{ padding: '0 24px', marginBottom: '20px' }}>
-        <div ref={mapRef} style={{
-          width: '100%', height: '260px',
-          borderRadius: '14px', border: `1px solid ${C.border}`,
-          background: C.surface2,
-        }} />
-      </div>
-
+      {/* Nearest Station */}
       {nearestStation && (
         <div style={{ padding: '0 24px', marginBottom: '12px' }}>
           <div style={{
@@ -156,19 +169,15 @@ export default function FinalCourse({ selections, onRestart, onBack, directInput
             borderRadius: '12px', padding: '12px 16px',
           }}>
             <span style={{ fontSize: '20px' }}>🚇</span>
-            <div style={{ flex: 1, textAlign: 'left' }}>
-              <span style={{ fontSize: '14px', color: C.text, fontWeight: '400' }}>
-                {nearestStation.name}
-              </span>
-              <span style={{ fontSize: '12px', color: C.textSub, marginLeft: '6px', fontWeight: '300' }}>
-                에서 내리세요
-              </span>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: '14px', color: C.text, fontWeight: '400' }}>{nearestStation.name}</span>
+              <span style={{ fontSize: '12px', color: C.textSub, marginLeft: '6px', fontWeight: '300' }}>{L.subway_hint}</span>
             </div>
             {nearestStation.distanceMeters && (
               <span style={{
                 fontSize: '12px', color: C.gold, fontWeight: '600',
                 background: C.surface2, borderRadius: '8px', padding: '3px 10px',
-                border: `1px solid ${C.border}`, flexShrink: 0,
+                border: `1px solid ${C.border}`,
               }}>
                 {nearestStation.distanceMeters < 1000
                   ? nearestStation.distanceMeters + 'm'
@@ -179,14 +188,11 @@ export default function FinalCourse({ selections, onRestart, onBack, directInput
         </div>
       )}
 
+      {/* Places */}
       <div style={{ padding: '0 24px', marginBottom: '24px' }}>
-        <div style={{
-          background: C.surface, borderRadius: '16px',
-          padding: '20px', border: `1px solid ${C.border}`,
-        }}>
+        <div style={{ background: C.surface, borderRadius: '16px', padding: '20px', border: `1px solid ${C.border}` }}>
           {orderedPlaces.map((place, idx) => (
             <div key={idx}>
-
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
                   width: '28px', height: '28px', borderRadius: '50%',
@@ -194,93 +200,95 @@ export default function FinalCourse({ selections, onRestart, onBack, directInput
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '12px', fontWeight: '600', flexShrink: 0,
                 }}>{idx + 1}</div>
-
                 <div style={{
                   width: '68px', height: '68px', borderRadius: '10px',
                   overflow: 'hidden', flexShrink: 0,
                   background: C.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  {place.photoUrl ? (
-                    <img src={place.photoUrl} alt={place.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={e => { e.target.style.display = 'none' }} />
-                  ) : <span style={{ fontSize: '28px' }}>{orderedIcons[idx]}</span>}
+                  {place.photoUrl
+                    ? <img src={place.photoUrl} alt={place.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span style={{ fontSize: '28px' }}>{orderedIcons[idx]}</span>}
                 </div>
-
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: '400', color: C.text, fontSize: '15px' }}>{place?.name}</p>
-                  {getTypeLabel(place?.primaryType) && (
+                  <p style={{ fontWeight: '400', color: C.text, fontSize: '15px' }}>{place.name}</p>
+                  {getTypeLabel(place.primaryType) && (
                     <span style={{
                       display: 'inline-block', background: C.surface2,
                       borderRadius: '6px', padding: '2px 8px',
                       fontSize: '11px', color: C.textSub, marginTop: '2px',
                       border: `1px solid ${C.border}`,
-                    }}>{getTypeLabel(place?.primaryType)}</span>
+                    }}>{getTypeLabel(place.primaryType)}</span>
                   )}
                   <p style={{ color: C.textSub, fontSize: '12px', marginTop: '4px', fontWeight: '300' }}>
-                    {place?.address?.split(' ').slice(0, 3).join(' ')}
+                    {place.address?.split(',').slice(0, 2).join(',')}
                   </p>
-                  {place?.rating && (
+                  {place.rating && (
                     <p style={{ color: C.goldDim, fontSize: '12px', marginTop: '2px' }}>
-                      ⭐ {place.rating.toFixed(1)}
-                      {place.userRatingsTotal && <span style={{ color: C.textSub }}> ({place.userRatingsTotal.toLocaleString()}개)</span>}
+                      ⭐ {place.rating} ({place.userRatingsTotal?.toLocaleString()})
                     </p>
                   )}
                 </div>
-
-                {place?.kakaoMapUrl && (
-                  <a href={place.kakaoMapUrl} target="_blank" rel="noopener noreferrer"
-                    style={{
-                      background: '#FEE500', borderRadius: '8px', padding: '6px 10px',
-                      fontSize: '12px', fontWeight: '600', color: '#1a1a1a',
-                      textDecoration: 'none', flexShrink: 0,
-                    }}>지도</a>
-                )}
-              </div>
-
-              {idx < orderedPlaces.length - 1 && walkingTimes[idx] && (
-                <div style={{ textAlign: 'center', padding: '12px 0' }}>
-                  <span style={{ color: C.textSub, fontSize: '12px', letterSpacing: '0.5px' }}>
-                    · · · 🚶 도보
-                  </span>
-                  <span style={{
-                    background: C.surface2, border: `1px solid ${C.border}`,
-                    borderRadius: '20px', padding: '4px 12px',
-                    fontSize: '12px', color: C.gold, fontWeight: '400', marginLeft: '8px',
+                {/* Google Maps link */}
+                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${place.placeId}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{
+                    background: '#4285F4', color: 'white',
+                    borderRadius: '8px', padding: '6px 10px',
+                    fontSize: '11px', fontWeight: '600',
+                    textDecoration: 'none', flexShrink: 0,
                   }}>
-                    약 {walkingTimes[idx].minutes}분
-                    <span style={{ color: C.textSub, marginLeft: '4px' }}>({walkingTimes[idx].distance})</span>
-                  </span>
+                  {L.map_btn}
+                </a>
+              </div>
+              {idx < orderedPlaces.length - 1 && walkingTimes[idx] && (
+                <div style={{ textAlign: 'center', color: C.textDim, fontSize: '11px', padding: '12px 0', letterSpacing: '0.5px' }}>
+                  · · · {L.walk} {walkingTimes[idx].mins}min ({walkingTimes[idx].dist}m)
                 </div>
+              )}
+              {idx < orderedPlaces.length - 1 && !walkingTimes[idx] && (
+                <div style={{ height: '1px', background: C.border, margin: '16px 0' }} />
               )}
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{ padding: '0 24px', marginBottom: '12px' }}>
-        <button onClick={handleKakaoShare} style={{
-          background: '#FEE500', color: '#1a1a1a', border: 'none',
-          padding: '16px', borderRadius: '12px',
-          fontSize: '15px', fontWeight: '600', cursor: 'pointer',
-          width: '100%', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', gap: '8px',
-          fontFamily: "'Outfit', sans-serif",
-          WebkitTapHighlightColor: 'transparent',
-        }}>
-          💬 카카오톡으로 공유하기
+      {/* Share buttons */}
+      <div style={{ padding: '0 24px', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+        <button onClick={shareWhatsApp} className="no-orange-card"
+          style={{
+            background: '#25D366', color: 'white',
+            border: 'none', borderRadius: '14px', padding: '15px',
+            fontSize: '15px', fontWeight: '600', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          }}>
+          <span style={{ fontSize: '18px' }}>💬</span>
+          {L.share_whatsapp}
+        </button>
+        <button onClick={copyLink} className="no-orange-card"
+          style={{
+            background: linkCopied ? C.surface2 : C.surface,
+            color: linkCopied ? C.gold : C.text,
+            border: `1.5px solid ${linkCopied ? C.gold : C.border}`,
+            borderRadius: '14px', padding: '15px',
+            fontSize: '15px', fontWeight: '400', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            transition: 'all 0.2s',
+          }}>
+          <span style={{ fontSize: '18px' }}>{linkCopied ? '✓' : '🔗'}</span>
+          {linkCopied ? L.link_copied : L.copy_link}
         </button>
       </div>
 
+      {/* New course */}
       <div style={{ padding: '0 24px' }}>
-        <button onClick={onRestart} style={{
-          background: C.gold, color: C.bg, border: 'none',
-          padding: '16px', borderRadius: '12px',
-          fontSize: '15px', fontWeight: '600', cursor: 'pointer',
-          width: '100%', fontFamily: "'Outfit', sans-serif",
-          WebkitTapHighlightColor: 'transparent',
-        }}>
-          새 코스 만들기 →
+        <button onClick={onRestart} className="no-orange-card"
+          style={{
+            width: '100%', background: C.gold, color: C.bg,
+            border: 'none', borderRadius: '14px', padding: '16px',
+            fontSize: '15px', fontWeight: '600', cursor: 'pointer',
+          }}>
+          {L.new_course}
         </button>
       </div>
     </div>
