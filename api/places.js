@@ -99,12 +99,25 @@ export default async function handler(req) {
     }
 
     // ── 장소 검색 (restaurant / cafe / bar) ───────────────
+    // cuisine 파라미터로 includedTypes 세분화
+    const cuisine = searchParams.get('cuisine')
+    const cuisineTypeMap = {
+      german: ['restaurant'],
+      italian: ['italian_restaurant'],
+      asian: ['chinese_restaurant', 'japanese_restaurant', 'korean_restaurant', 'asian_restaurant'],
+      turkish: ['turkish_restaurant'],
+      french: ['french_restaurant'],
+      american: ['american_restaurant'],
+      mediterranean: ['mediterranean_restaurant', 'greek_restaurant'],
+    }
     const typeMap = {
       restaurant: ['restaurant'],
       cafe: ['cafe', 'coffee_shop', 'bakery'],
       bar: ['bar', 'night_club'],
     }
-    const includedTypes = typeMap[type] || ['restaurant']
+    const includedTypes = (type === 'restaurant' && cuisine && cuisineTypeMap[cuisine])
+      ? cuisineTypeMap[cuisine]
+      : (typeMap[type] || ['restaurant'])
 
     const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
       method: 'POST',

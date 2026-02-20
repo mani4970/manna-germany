@@ -18,10 +18,8 @@ export default function RestaurantList({ lang, L, selections, referencePoint, on
   useEffect(() => {
     if (!ref?.lat) return
     const cuisine = selections.restaurantCuisine || 'all'
-    const cuisineMap = { german: 'deutsches Restaurant', italian: 'italienisches Restaurant', asian: 'asiatisches Restaurant', turkish: 'türkisches Restaurant', french: 'französisches Restaurant', american: 'amerikanisches Restaurant', mediterranean: 'mediterranes Restaurant' }
-    const cuisineQuery = cuisineMap[cuisine]
-    const url = cuisineQuery
-      ? `/api/places/search?type=restaurant&cuisine=${cuisine}&lat=${ref.lat}&lng=${ref.lng}&radius=1000&query=${encodeURIComponent(cuisineQuery)}`
+    const url = cuisine && cuisine !== 'all'
+      ? `/api/places/search?type=restaurant&cuisine=${cuisine}&lat=${ref.lat}&lng=${ref.lng}&radius=1000`
       : `/api/places/search?type=restaurant&lat=${ref.lat}&lng=${ref.lng}&radius=1000`
     fetch(url).then(r=>r.json()).then(data=>{
       setPlaces((data.places||[]).map(p=>({...p, distanceMeters: haversineDistance(ref.lat,ref.lng,p.lat,p.lng)})))
