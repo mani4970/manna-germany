@@ -4,232 +4,6 @@ export const config = {
 
 const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY
 
-const CUISINE_TEXT = {
-  german: 'deutsches Restaurant',
-  italian: 'italienisches Restaurant',
-  asian: 'asiatisches Restaurant',
-  turkish: 'türkisches Restaurant',
-  french: 'französisches Restaurant',
-  american: 'amerikanisches Restaurant',
-  mediterranean: 'mediterranes Restaurant',
-}
-
-export default async function handler(req) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const type = searchParams.get('type')
-    const lat = parseFloat(searchParams.get('lat')) || null
-    const lng = parseFloat(searchParams.get('lng')) || null
-    const radius = parseInt(searchParams.get('radius')) || 1000
-    const query = searchParams.get('query')
-    const cuisine = searchParams.get('cuisine')
-
-    // lat/lng 없으면 에러
-    if (!query && (!lat || !lng)) {
-      return new Response(JSON.stringify({ error: 'lat/lng required', places: [] }), {
-        status: 400, headers: { 'Content-Type': 'application/json' }
-      })
-    }
-
-    // 직접 검색
-    if (query) {
-      const searchQuery = query
-      
-      const googleRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': GOOGLE_API_KEY,
-          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.photos,places.primaryType,places.priceLevel'
-        },
-        body: JSON.stringify({
-          textQuery: searchQuery,
-          languageCode: 'de',
-          regionCode: 'DE',
-          maxResultCount: 20,
-        })
-      })
-
-      const data = await googleRes.json()
-      const places = (data.places || []).map(p => ({
-        placeId: p.id,
-        name: p.displayName?.text || '',
-        address: p.formattedAddress || '',
-        lat: p.location?.latitude,
-        lng: p.location?.longitude,
-        rating: p.rating,
-        userRatingsTotal: p.userRatingCount,
-        photoUrl: p.photos?.[0] 
-          ? `https://places.googleapis.com/v1/${p.photos[0].name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=400`
-          : null,
-        primaryType: p.primaryType,
-        priceLevel: p.priceLevel,
-        googleMapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.displayName?.text || '')}&query_place_id=${p.id}`
-      }))
-
-      return new Response(JSON.stringify({ places }), {
-        headers: { 'Content-Type': 'application/json' }
-      })
-    }
-
-    // 음식 카테고리가 있으면 searchText 사용
-    if (type === 'restaurant' && cuisine && cuisine !== 'all' && CUISINE_TEXT[cuisine]) {
-      const textQuery = CUISINE_TEXT[cuisine]
-      
-      const googleRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': GOOGLE_API_KEY,
-          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.photos,places.primaryType,places.priceLevel'
-        },
-        body: JSON.stringify({
-          textQuery: textQuery,
-          languageCode: 'de',
-          regionCode: 'DE',
-          maxResultCount: 20,
-          locationRestriction: {
-            circle: {
-              center: { latitude: lat, longitude: lng },
-              radius: radius
-            }
-          }
-        })
-      })
-
-      const data = await googleRes.json()
-      let places = (data.places || []).map(p => ({
-        placeId: p.id,
-        name: p.displayName?.text || '',
-        address: p.formattedAddress || '',
-        lat: p.location?.latitude,
-        lng: p.location?.longitude,
-        rating: p.rating,
-        userRatingsTotal: p.userRatingCount,
-        photoUrl: p.photos?.[0] 
-          ? `https://places.googleapis.com/v1/${p.photos[0].name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=400`
-          : null,
-        primaryType: p.primaryType,
-        priceLevel: p.priceLevel,
-        distanceMeters: haversineDistance(lat, lng, p.location?.latitude, p.location?.longitude),
-        googleMapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.displayName?.text || '')}&query_place_id=${p.id}`
-      }))
-
-      // 반경 내만 필터
-      places = places.filter(p => p.distanceMeters && p.distanceMeters <= radius)
-
-      const sorted = places.sort((a, b) => {
-        const aScore = (a.rating || 0) * Math.log10((a.userRatingsTotal || 0) + 10)
-        const bScore = (b.rating || 0) * Math.log10((b.userRatingsTotal || 0) + 10)
-        return bScore - aScore
-      })
-
-      return new Response(JSON.stringify({ places: sorted }), {
-        headers: { 'Content-Type': 'application/json' }
-      })
-    }
-
-    // 지하철역 검색
-    if (type === 'subway') {
-      const googleRes = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': GOOGLE_API_KEY,
-          'X-Goog-FieldMask': 'places.id,places.displayName,places.location'
-        },
-        body: JSON.stringify({
-          includedTypes: ['subway_station'],
-          locationRestriction: {
-            circle: {
-              center: { latitude: lat, longitude: lng },
-              radius: 2000
-            }
-          },
-          maxResultCount: 5,
-          rankPreference: 'DISTANCE',
-          languageCode: 'de',
-          regionCode: 'DE'
-        })
-      })
-      const data = await googleRes.json()
-      const stations = (data.places || []).map(p => ({
-        name: p.displayName?.text || '',
-        lat: p.location?.latitude,
-        lng: p.location?.longitude,
-        distanceMeters: haversineDistance(lat, lng, p.location?.latitude, p.location?.longitude),
-      }))
-      const nearest = stations.sort((a, b) => (a.distanceMeters || 9999) - (b.distanceMeters || 9999))[0] || null
-      return new Response(JSON.stringify({ station: nearest }), {
-        headers: { 'Content-Type': 'application/json' }
-      })
-    }
-
-    // 카페/바 또는 전체 레스토랑 - searchNearby 사용
-    const includedType = type === 'restaurant' ? 'restaurant' : (type === 'cafe' ? 'cafe' : 'bar')
-
-    const googleRes = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': GOOGLE_API_KEY,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.photos,places.primaryType,places.priceLevel'
-      },
-      body: JSON.stringify({
-        includedTypes: [includedType],
-        locationRestriction: {
-          circle: {
-            center: { latitude: lat, longitude: lng },
-            radius: radius
-          }
-        },
-        maxResultCount: 20,
-        rankPreference: 'POPULARITY',
-        languageCode: 'de',
-        regionCode: 'DE'
-      })
-    })
-
-    const data = await googleRes.json()
-    
-    const places = (data.places || []).map(p => ({
-      placeId: p.id,
-      name: p.displayName?.text || '',
-      address: p.formattedAddress || '',
-      lat: p.location?.latitude,
-      lng: p.location?.longitude,
-      rating: p.rating,
-      userRatingsTotal: p.userRatingCount,
-      photoUrl: p.photos?.[0] 
-        ? `https://places.googleapis.com/v1/${p.photos[0].name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=400`
-        : null,
-      primaryType: p.primaryType,
-      priceLevel: p.priceLevel,
-      distanceMeters: haversineDistance(lat, lng, p.location?.latitude, p.location?.longitude),
-      googleMapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.displayName?.text || '')}&query_place_id=${p.id}`
-    }))
-
-    // 반경 밖 결과 필터링
-    const filtered = places.filter(p => p.distanceMeters && p.distanceMeters <= radius * 3)
-    const sorted = filtered.sort((a, b) => {
-      const aScore = (a.rating || 0) * Math.log10((a.userRatingsTotal || 0) + 10)
-      const bScore = (b.rating || 0) * Math.log10((b.userRatingsTotal || 0) + 10)
-      return bScore - aScore
-    })
-
-    return new Response(JSON.stringify({ places: sorted }), {
-      headers: { 'Content-Type': 'application/json' }
-    })
-
-  } catch (error) {
-    console.error('Search error:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    })
-  }
-}
-
 function haversineDistance(lat1, lon1, lat2, lon2) {
   if (!lat1 || !lon1 || !lat2 || !lon2) return null
   const toRad = x => (x * Math.PI) / 180
@@ -238,4 +12,156 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   const dLon = toRad(lon2 - lon1)
   const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2
   return Math.round(2 * R * Math.asin(Math.sqrt(a)))
+}
+
+export default async function handler(req) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const type = searchParams.get('type')
+    const lat = parseFloat(searchParams.get('lat'))
+    const lng = parseFloat(searchParams.get('lng'))
+    const radius = parseInt(searchParams.get('radius')) || 1000
+    const query = searchParams.get('query')
+
+    // ── 직접 검색 ──────────────────────────────────────────
+    if (query) {
+      const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': GOOGLE_API_KEY,
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.photos,places.primaryType',
+        },
+        body: JSON.stringify({
+          textQuery: query,
+          languageCode: 'de',
+          regionCode: 'DE',
+          maxResultCount: 10,
+        }),
+      })
+      const data = await res.json()
+      const places = (data.places || []).map(p => ({
+        placeId: p.id,
+        name: p.displayName?.text || '',
+        address: p.formattedAddress || '',
+        lat: p.location?.latitude,
+        lng: p.location?.longitude,
+        rating: p.rating,
+        userRatingsTotal: p.userRatingCount,
+        photoUrl: p.photos?.[0]
+          ? `https://places.googleapis.com/v1/${p.photos[0].name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=400`
+          : null,
+        primaryType: p.primaryType,
+      }))
+      return new Response(JSON.stringify({ places }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // ── lat/lng 없으면 에러 ────────────────────────────────
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+      return new Response(JSON.stringify({ places: [], error: 'lat/lng required' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // ── 대중교통역 검색 ────────────────────────────────────
+    if (type === 'subway') {
+      const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': GOOGLE_API_KEY,
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.location',
+        },
+        body: JSON.stringify({
+          includedTypes: ['subway_station', 'train_station', 'light_rail_station'],
+          locationRestriction: {
+            circle: { center: { latitude: lat, longitude: lng }, radius: 2000 },
+          },
+          maxResultCount: 5,
+          rankPreference: 'DISTANCE',
+          languageCode: 'de',
+          regionCode: 'DE',
+        }),
+      })
+      const data = await res.json()
+      const stations = (data.places || []).map(p => ({
+        name: p.displayName?.text || '',
+        lat: p.location?.latitude,
+        lng: p.location?.longitude,
+        distanceMeters: haversineDistance(lat, lng, p.location?.latitude, p.location?.longitude),
+      }))
+      const nearest = stations.sort((a, b) => (a.distanceMeters || 9999) - (b.distanceMeters || 9999))[0] || null
+      return new Response(JSON.stringify({ station: nearest }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // ── 장소 검색 (restaurant / cafe / bar) ───────────────
+    const typeMap = {
+      restaurant: ['restaurant'],
+      cafe: ['cafe', 'coffee_shop', 'bakery'],
+      bar: ['bar', 'night_club'],
+    }
+    const includedTypes = typeMap[type] || ['restaurant']
+
+    const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_API_KEY,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.photos,places.primaryType,places.priceLevel',
+      },
+      body: JSON.stringify({
+        includedTypes,
+        locationRestriction: {
+          circle: { center: { latitude: lat, longitude: lng }, radius },
+        },
+        maxResultCount: 20,
+        rankPreference: 'POPULARITY',
+        languageCode: 'de',
+        regionCode: 'DE',
+      }),
+    })
+
+    const data = await res.json()
+    const places = (data.places || []).map(p => {
+      const dist = haversineDistance(lat, lng, p.location?.latitude, p.location?.longitude)
+      return {
+        placeId: p.id,
+        name: p.displayName?.text || '',
+        address: p.formattedAddress || '',
+        lat: p.location?.latitude,
+        lng: p.location?.longitude,
+        rating: p.rating,
+        userRatingsTotal: p.userRatingCount,
+        photoUrl: p.photos?.[0]
+          ? `https://places.googleapis.com/v1/${p.photos[0].name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=400`
+          : null,
+        primaryType: p.primaryType,
+        priceLevel: p.priceLevel,
+        distanceMeters: dist,
+        googleMapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.displayName?.text || '')}&query_place_id=${p.id}`,
+      }
+    })
+
+    // 반경 밖 결과 완전 제거
+    const filtered = places.filter(p => p.distanceMeters !== null && p.distanceMeters <= radius)
+
+    const sorted = filtered.sort((a, b) => {
+      const scoreA = (a.rating || 0) * Math.log10((a.userRatingsTotal || 0) + 10)
+      const scoreB = (b.rating || 0) * Math.log10((b.userRatingsTotal || 0) + 10)
+      return scoreB - scoreA
+    })
+
+    return new Response(JSON.stringify({ places: sorted }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message, places: [] }), {
+      status: 500, headers: { 'Content-Type': 'application/json' },
+    })
+  }
 }
