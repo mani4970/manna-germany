@@ -5,12 +5,13 @@ export const config = {
 const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY
 
 const CUISINE_TEXT = {
-  korean: '한식 레스토랑',
-  japanese: '일식 레스토랑',
-  chinese: '중식 레스토랑',
-  western: '양식 레스토랑',
-  meat: '고기 레스토랑',
-  seafood: '해산물 레스토랑',
+  german: 'deutsches Restaurant',
+  italian: 'italienisches Restaurant',
+  asian: 'asiatisches Restaurant',
+  turkish: 'türkisches Restaurant',
+  french: 'französisches Restaurant',
+  american: 'amerikanisches Restaurant',
+  mediterranean: 'mediterranes Restaurant',
 }
 
 export default async function handler(req) {
@@ -36,8 +37,8 @@ export default async function handler(req) {
         },
         body: JSON.stringify({
           textQuery: searchQuery,
-          languageCode: 'ko',
-          regionCode: 'KR',
+          languageCode: 'de',
+          regionCode: 'DE',
           maxResultCount: 20,
         })
       })
@@ -56,7 +57,7 @@ export default async function handler(req) {
           : null,
         primaryType: p.primaryType,
         priceLevel: p.priceLevel,
-        kakaoMapUrl: `https://map.kakao.com/link/map/${encodeURIComponent(p.displayName?.text || '')},${p.location?.latitude},${p.location?.longitude}`
+        googleMapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.displayName?.text || '')}&query_place_id=${p.id}`
       }))
 
       return new Response(JSON.stringify({ places }), {
@@ -77,8 +78,8 @@ export default async function handler(req) {
         },
         body: JSON.stringify({
           textQuery: textQuery,
-          languageCode: 'ko',
-          regionCode: 'KR',
+          languageCode: 'de',
+          regionCode: 'DE',
           maxResultCount: 20,
           locationBias: {
             circle: {
@@ -104,7 +105,7 @@ export default async function handler(req) {
         primaryType: p.primaryType,
         priceLevel: p.priceLevel,
         distanceMeters: haversineDistance(lat, lng, p.location?.latitude, p.location?.longitude),
-        kakaoMapUrl: `https://map.kakao.com/link/map/${encodeURIComponent(p.displayName?.text || '')},${p.location?.latitude},${p.location?.longitude}`
+        googleMapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.displayName?.text || '')}&query_place_id=${p.id}`
       }))
 
       // 반경 내만 필터
@@ -140,8 +141,8 @@ export default async function handler(req) {
           },
           maxResultCount: 5,
           rankPreference: 'DISTANCE',
-          languageCode: 'ko',
-          regionCode: 'KR'
+          languageCode: 'de',
+          regionCode: 'DE'
         })
       })
       const data = await googleRes.json()
@@ -177,8 +178,8 @@ export default async function handler(req) {
         },
         maxResultCount: 20,
         rankPreference: 'POPULARITY',
-        languageCode: 'ko',
-        regionCode: 'KR'
+        languageCode: 'de',
+        regionCode: 'DE'
       })
     })
 
@@ -198,7 +199,7 @@ export default async function handler(req) {
       primaryType: p.primaryType,
       priceLevel: p.priceLevel,
       distanceMeters: haversineDistance(lat, lng, p.location?.latitude, p.location?.longitude),
-      kakaoMapUrl: `https://map.kakao.com/link/map/${encodeURIComponent(p.displayName?.text || '')},${p.location?.latitude},${p.location?.longitude}`
+      googleMapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.displayName?.text || '')}&query_place_id=${p.id}`
     }))
 
     const sorted = places.sort((a, b) => {
