@@ -18,15 +18,15 @@ export default async function handler(req) {
   try {
     const { searchParams } = new URL(req.url)
     const type = searchParams.get('type')
-    const lat = parseFloat(searchParams.get('lat'))
-    const lng = parseFloat(searchParams.get('lng'))
+    const lat = parseFloat(searchParams.get('lat')) || null
+    const lng = parseFloat(searchParams.get('lng')) || null
     const radius = parseInt(searchParams.get('radius')) || 1000
     const query = searchParams.get('query')
     const cuisine = searchParams.get('cuisine')
 
     // 직접 검색
     if (query) {
-      const searchQuery = query + ' 서울'
+      const searchQuery = query
       
       const googleRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
         method: 'POST',
