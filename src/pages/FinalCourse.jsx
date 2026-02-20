@@ -88,10 +88,12 @@ export default function FinalCourse({ selections, lang, L, onRestart, onBack, di
         })
       })
     }
-    if (window.google?.maps) initMap()
-    else {
+    const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    if (window.google?.maps) {
+      initMap()
+    } else if (mapsKey) {
       const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsKey}`
       script.onload = initMap
       document.head.appendChild(script)
     }

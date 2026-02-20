@@ -24,6 +24,13 @@ export default async function handler(req) {
     const query = searchParams.get('query')
     const cuisine = searchParams.get('cuisine')
 
+    // lat/lng 없으면 에러
+    if (!query && (!lat || !lng)) {
+      return new Response(JSON.stringify({ error: 'lat/lng required', places: [] }), {
+        status: 400, headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
     // 직접 검색
     if (query) {
       const searchQuery = query
@@ -202,7 +209,9 @@ export default async function handler(req) {
       googleMapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.displayName?.text || '')}&query_place_id=${p.id}`
     }))
 
-    const sorted = places.sort((a, b) => {
+    // 반경 밖 결과 필터링
+    const filtered = places.filter(p => p.distanceMeters && p.distanceMeters <= radius * 3)
+    const sorted = filtered.sort((a, b) => {
       const aScore = (a.rating || 0) * Math.log10((a.userRatingsTotal || 0) + 10)
       const bScore = (b.rating || 0) * Math.log10((b.userRatingsTotal || 0) + 10)
       return bScore - aScore
