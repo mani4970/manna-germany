@@ -81,7 +81,7 @@ export default async function handler(req) {
           languageCode: 'de',
           regionCode: 'DE',
           maxResultCount: 20,
-          locationBias: {
+          locationRestriction: {
             circle: {
               center: { latitude: lat, longitude: lng },
               radius: radius
