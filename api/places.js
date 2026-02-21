@@ -25,6 +25,7 @@ export default async function handler(req) {
     const occasion = searchParams.get('occasion') || 'all'
     const budget = searchParams.get('budget') || 'all'
     const offset = parseInt(searchParams.get('offset')) || 0
+    const seed = parseInt(searchParams.get('seed')) || 0
 
     // ── 직접 검색 ──────────────────────────────────────────
     if (query) {
@@ -150,7 +151,7 @@ export default async function handler(req) {
         locationRestriction: {
           circle: { center: { latitude: lat, longitude: lng }, radius },
         },
-        maxResultCount: 40,
+        maxResultCount: 20,
         rankPreference: 'POPULARITY',
         languageCode: 'de',
         regionCode: 'DE',
@@ -246,9 +247,18 @@ export default async function handler(req) {
       return scoreB - scoreA
     })
 
+    // seed가 있으면 결과를 섞어서 다양한 결과 제공
+    if (seed > 0) {
+      for (let i = sorted.length - 1; i > 0; i--) {
+        const j = Math.floor(((seed * (i + 1)) % 2147483647) / 2147483647 * (i + 1))
+        ;[sorted[i], sorted[j]] = [sorted[j], sorted[i]]
+      }
+    }
+
     const total = sorted.length
-    const paginated = sorted.slice(offset, offset + 20)
-    return new Response(JSON.stringify({ places: paginated, total, hasMore: offset + 20 < total }), {
+    const paginated = sorted.slice(0, 20)
+    const hasMore = total > 20
+    return new Response(JSON.stringify({ places: paginated, total, hasMore }), {
       headers: { 'Content-Type': 'application/json' },
     })
 

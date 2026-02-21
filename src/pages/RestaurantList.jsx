@@ -12,40 +12,35 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 export default function RestaurantList({ lang, L, selections, referencePoint, onNext, onBack }) {
   const [places, setPlaces] = useState([])
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(false)
-  const [offset, setOffset] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const [seed, setSeed] = useState(0)
   const [sortBy, setSortBy] = useState('rating')
   const ref = referencePoint || selections.hotspot
 
-  const fetchPlaces = async (currentOffset = 0, append = false) => {
+  const fetchPlaces = async (currentSeed = 0) => {
     if (!ref?.lat) return
     const cuisine = selections.restaurantCuisine || 'all'
     const occasion = encodeURIComponent(selections.occasion || 'all')
     const budget = encodeURIComponent(selections.budget || 'all')
-    const base = `/api/places/search?type=restaurant&lat=${ref.lat}&lng=${ref.lng}&radius=2000&occasion=${occasion}&budget=${budget}&offset=${currentOffset}`
+    const base = `/api/places/search?type=restaurant&lat=${ref.lat}&lng=${ref.lng}&radius=2000&occasion=${occasion}&budget=${budget}&seed=${currentSeed}`
     const url = cuisine && cuisine !== 'all' ? `${base}&cuisine=${cuisine}` : base
-
-    try {
-      const res = await fetch(url)
-      const data = await res.json()
-      const newPlaces = (data.places || []).map(p => ({
-        ...p, distanceMeters: haversineDistance(ref.lat, ref.lng, p.lat, p.lng)
-      }))
-      setPlaces(prev => append ? [...prev, ...newPlaces] : newPlaces)
-      setHasMore(data.hasMore || false)
-      setOffset(currentOffset + newPlaces.length)
-    } catch (e) {}
+    const res = await fetch(url)
+    const data = await res.json()
+    setPlaces((data.places || []).map(p => ({
+      ...p, distanceMeters: haversineDistance(ref.lat, ref.lng, p.lat, p.lng)
+    })))
   }
 
   useEffect(() => {
-    fetchPlaces(0, false).finally(() => setLoading(false))
+    fetchPlaces(0).finally(() => setLoading(false))
   }, [])
 
-  const loadMore = async () => {
-    setLoadingMore(true)
-    await fetchPlaces(offset, true)
-    setLoadingMore(false)
+  const refresh = async () => {
+    setRefreshing(true)
+    const newSeed = Math.floor(Math.random() * 9999) + 1
+    setSeed(newSeed)
+    await fetchPlaces(newSeed)
+    setRefreshing(false)
   }
 
   const sorted = [...places].sort((a,b)=>{
@@ -60,11 +55,18 @@ export default function RestaurantList({ lang, L, selections, referencePoint, on
   return (
     <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Outfit', sans-serif", paddingBottom: '40px' }}>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600&display=swap" rel="stylesheet" />
-      <div style={{ padding: '24px 24px 0', textAlign: 'center' }}>
+      <div style={{ padding: '24px 24px 0' }}>
         <div style={{ paddingTop: '20px' }}>
           <button onClick={onBack} className="no-orange-card" style={{ background:'none',border:'none',color:C.textSub,fontSize:'14px',cursor:'pointer',padding:'0 0 16px 0',display:'flex',alignItems:'center',gap:'4px' }}>{L.back}</button>
-          <h1 style={{ fontSize:'22px',fontWeight:'300',color:C.text,letterSpacing:'-0.3px' }}>🍽️ Restaurant</h1>
-          <p style={{ color:C.textSub,marginTop:'4px',fontSize:'13px',fontWeight:'300' }}>{displayName} · {lang==='de'?'2km Umgebung':'within 2km'}</p>
+          <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:'12px' }}>
+            <h1 style={{ fontSize:'22px',fontWeight:'300',color:C.text,letterSpacing:'-0.3px' }}>🍽️ Restaurant</h1>
+            <button onClick={refresh} className="no-orange-card" disabled={refreshing}
+              style={{ background:'none',border:`1px solid ${C.border}`,borderRadius:'20px',padding:'5px 12px',fontSize:'12px',color:C.textSub,cursor:'pointer',display:'flex',alignItems:'center',gap:'4px' }}>
+              <span style={{ display:'inline-block',transform:refreshing?'rotate(180deg)':'rotate(0)',transition:'transform 0.4s' }}>↻</span>
+              {lang==='de' ? 'Neu laden' : 'Refresh'}
+            </button>
+          </div>
+          <p style={{ color:C.textSub,marginTop:'4px',fontSize:'13px',fontWeight:'300',textAlign:'center' }}>{displayName} · {lang==='de'?'2km Umgebung':'within 2km'}</p>
         </div>
       </div>
       <div style={{ display:'flex',gap:'8px',padding:'16px 24px',overflowX:'auto',scrollbarWidth:'none' }}>
@@ -80,30 +82,20 @@ export default function RestaurantList({ lang, L, selections, referencePoint, on
           <div style={{ textAlign:'center',padding:'60px 0',color:C.textSub }}>{L.loading_restaurant}</div>
         ) : sorted.length === 0 ? (
           <div style={{ textAlign:'center',padding:'60px 0',color:C.textSub }}>{L.no_results}</div>
-        ) : (
-          <>
-            {sorted.map((p,i)=>(
-              <button key={p.placeId||i} onClick={()=>onNext(p)} className="no-orange-card"
-                style={{ display:'flex',alignItems:'center',gap:'12px',padding:'14px',borderRadius:'16px',border:`1.5px solid ${C.border}`,background:C.surface,cursor:'pointer',textAlign:'left',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,0.03)' }}>
-                <div style={{ width:'24px',height:'24px',borderRadius:'50%',background:i<3?C.gold:C.surface2,color:i<3?C.bg:C.textSub,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'11px',fontWeight:'600',flexShrink:0 }}>{i+1}</div>
-                <div style={{ width:'64px',height:'64px',borderRadius:'10px',overflow:'hidden',flexShrink:0,background:C.surface2,display:'flex',alignItems:'center',justifyContent:'center' }}>
-                  {p.photoUrl?<img src={p.photoUrl} alt={p.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>e.target.style.display='none'}/>:<span style={{fontSize:'24px'}}>🍽️</span>}
-                </div>
-                <div style={{ flex:1 }}>
-                  <p style={{ fontWeight:'400',fontSize:'14px',color:C.text }}>{p.name}</p>
-                  {p.rating&&<p style={{ color:C.goldDim,fontSize:'12px',marginTop:'2px' }}>⭐ {p.rating} ({p.userRatingsTotal?.toLocaleString()})</p>}
-                  {p.distanceMeters&&<p style={{ color:C.textSub,fontSize:'11px',marginTop:'2px' }}>{p.distanceMeters}m · {Math.round(p.distanceMeters/80)} min {L.walk}</p>}
-                </div>
-              </button>
-            ))}
-            {hasMore && (
-              <button onClick={loadMore} className="no-orange-card"
-                style={{ width:'100%',padding:'14px',borderRadius:'14px',border:`1.5px solid ${C.border}`,background:C.surface,color:C.gold,fontSize:'14px',fontWeight:'400',cursor:'pointer',marginTop:'4px' }}>
-                {loadingMore ? '...' : (lang==='de' ? 'Mehr anzeigen' : 'Show more')}
-              </button>
-            )}
-          </>
-        )}
+        ) : sorted.map((p,i)=>(
+          <button key={p.placeId||i} onClick={()=>onNext(p)} className="no-orange-card"
+            style={{ display:'flex',alignItems:'center',gap:'12px',padding:'14px',borderRadius:'16px',border:`1.5px solid ${C.border}`,background:C.surface,cursor:'pointer',textAlign:'left',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,0.03)',opacity:refreshing?0.5:1,transition:'opacity 0.2s' }}>
+            <div style={{ width:'24px',height:'24px',borderRadius:'50%',background:i<3?C.gold:C.surface2,color:i<3?C.bg:C.textSub,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'11px',fontWeight:'600',flexShrink:0 }}>{i+1}</div>
+            <div style={{ width:'64px',height:'64px',borderRadius:'10px',overflow:'hidden',flexShrink:0,background:C.surface2,display:'flex',alignItems:'center',justifyContent:'center' }}>
+              {p.photoUrl?<img src={p.photoUrl} alt={p.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>e.target.style.display='none'}/>:<span style={{fontSize:'24px'}}>🍽️</span>}
+            </div>
+            <div style={{ flex:1 }}>
+              <p style={{ fontWeight:'400',fontSize:'14px',color:C.text }}>{p.name}</p>
+              {p.rating&&<p style={{ color:C.goldDim,fontSize:'12px',marginTop:'2px' }}>⭐ {p.rating} ({p.userRatingsTotal?.toLocaleString()})</p>}
+              {p.distanceMeters&&<p style={{ color:C.textSub,fontSize:'11px',marginTop:'2px' }}>{p.distanceMeters}m · {Math.round(p.distanceMeters/80)} min {L.walk}</p>}
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   )
