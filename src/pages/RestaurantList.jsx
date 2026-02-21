@@ -50,23 +50,21 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 export default function RestaurantList({ lang, L, selections, referencePoint, onNext, onBack }) {
   const [places, setPlaces] = useState([])
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [selectedPopup, setSelectedPopup] = useState(null)
   const [popupStation, setPopupStation] = useState(null)
   const [sortBy, setSortBy] = useState('rating')
+  const [radius, setRadius] = useState(1000)
   const ref = referencePoint || selections.hotspot
 
   const walkLabel   = lang === 'de' ? 'zu Fuß'    : 'walk'
   const sortLabels  = lang === 'de'
     ? { rating: 'Bewertung', reviews: 'Rezensionen', distance: 'Entfernung' }
     : { rating: 'Rating',    reviews: 'Reviews',     distance: 'Distance' }
-  const refreshLabel = lang === 'de' ? 'Neu laden' : 'Refresh'
-  const radiusLabel  = lang === 'de' ? '1km Umgebung' : 'within 1km'
 
   const fetchPlaces = async (seed = 0) => {
     if (!ref?.lat) return
     const cuisine = selections.restaurantCuisine || 'all'
-    const base = `/api/places/search?type=restaurant&lat=${ref.lat}&lng=${ref.lng}&radius=1000&seed=${seed}`
+    const base = `/api/places/search?type=restaurant&lat=${ref.lat}&lng=${ref.lng}&radius=${radius}&seed=${seed}`
     const url = cuisine && cuisine !== 'all' ? `${base}&cuisine=${cuisine}` : base
     const res = await fetch(url)
     const data = await res.json()
@@ -76,12 +74,13 @@ export default function RestaurantList({ lang, L, selections, referencePoint, on
   }
 
   useEffect(() => { fetchPlaces(0).finally(() => setLoading(false)) }, [])
+  useEffect(() => {
+    if (!loading) {
+      setLoading(true)
+      fetchPlaces(0).finally(() => setLoading(false))
+    }
+  }, [radius])
 
-  const refresh = async () => {
-    setRefreshing(true)
-    await fetchPlaces(Math.floor(Math.random() * 9999) + 1)
-    setRefreshing(false)
-  }
 
   const sorted = [...places].sort((a, b) => {
     if (sortBy === 'rating')   return ((b.rating||0) * Math.log10((b.userRatingsTotal||0)+10)) - ((a.rating||0) * Math.log10((a.userRatingsTotal||0)+10))
@@ -105,26 +104,33 @@ export default function RestaurantList({ lang, L, selections, referencePoint, on
           </button>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'12px' }}>
             <h1 style={{ fontSize:'22px', fontWeight:'300', color:C.text, letterSpacing:'-0.3px' }}>🍽️ Restaurant</h1>
-            <button onClick={refresh} className="no-orange-card" disabled={refreshing}
-              style={{ background:'none', border:`1px solid ${C.border}`, borderRadius:'20px', padding:'5px 12px', fontSize:'12px', color:C.textSub, cursor:'pointer', display:'flex', alignItems:'center', gap:'4px' }}>
-              <span style={{ display:'inline-block', transform: refreshing ? 'rotate(180deg)' : 'none', transition:'transform 0.5s' }}>↻</span>
-              {refreshLabel}
-            </button>
           </div>
           <p style={{ color:C.textSub, marginTop:'4px', fontSize:'13px', fontWeight:'300', textAlign:'center' }}>
-            {displayName} · {radiusLabel}
+            {displayName}
           </p>
         </div>
       </div>
 
       {/* 정렬 버튼 */}
-      <div style={{ display:'flex', gap:'8px', padding:'16px 24px', overflowX:'auto', scrollbarWidth:'none' }}>
-        {(['rating', 'reviews', 'distance']).map(k => (
-          <button key={k} onClick={() => setSortBy(k)} className="no-orange-card"
-            style={{ padding:'7px 14px', borderRadius:'20px', border:`1px solid ${sortBy===k ? C.gold : C.border}`, background: sortBy===k ? C.surface2 : C.surface, color: sortBy===k ? C.gold : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
-            {sortLabels[k]}
-          </button>
-        ))}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 24px 4px', gap:'8px' }}>
+        {/* 정렬 탭 */}
+        <div style={{ display:'flex', gap:'6px', overflowX:'auto', scrollbarWidth:'none' }}>
+          {(['rating', 'reviews', 'distance']).map(k => (
+            <button key={k} onClick={() => setSortBy(k)} className="no-orange-card"
+              style={{ padding:'6px 12px', borderRadius:'20px', border:`1px solid ${sortBy===k ? C.gold : C.border}`, background: sortBy===k ? C.surface2 : C.surface, color: sortBy===k ? C.gold : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+              {sortLabels[k]}
+            </button>
+          ))}
+        </div>
+        {/* 반경 탭 */}
+        <div style={{ display:'flex', gap:'4px', flexShrink:0 }}>
+          {[[1000,'1km'],[3000,'3km'],[5000,'5km']].map(([r, label]) => (
+            <button key={r} onClick={() => setRadius(r)} className="no-orange-card"
+              style={{ padding:'6px 10px', borderRadius:'20px', border:`1px solid ${radius===r ? C.gold : C.border}`, background: radius===r ? C.gold : C.surface, color: radius===r ? C.bg : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', fontWeight: radius===r ? '600' : '400' }}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* 리스트 */}
@@ -149,7 +155,7 @@ export default function RestaurantList({ lang, L, selections, referencePoint, on
               }
             }}
             className="no-orange-card"
-            style={{ display:'flex', alignItems:'center', gap:'12px', padding:'14px', borderRadius:'16px', border:`1.5px solid ${C.border}`, background:C.surface, cursor:'pointer', textAlign:'left', width:'100%', boxShadow:'0 2px 8px rgba(0,0,0,0.03)', opacity: refreshing ? 0.5 : 1, transition:'opacity 0.2s' }}>
+            style={{ display:'flex', alignItems:'center', gap:'12px', padding:'14px', borderRadius:'16px', border:`1.5px solid ${C.border}`, background:C.surface, cursor:'pointer', textAlign:'left', width:'100%', boxShadow:'0 2px 8px rgba(0,0,0,0.03)', transition:'opacity 0.2s' }}>
 
             {/* 순위 번호 */}
             <div style={{ width:'24px', height:'24px', borderRadius:'50%', background: i<3 ? C.gold : C.surface2, color: i<3 ? C.bg : C.textSub, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'600', flexShrink:0 }}>
