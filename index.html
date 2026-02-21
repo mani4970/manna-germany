@@ -2,12 +2,35 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
+
+    <!-- PWA 핵심 -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#B89A6A" />
+
+    <!-- iOS PWA 지원 -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="MANNA" />
+    <link rel="apple-touch-icon" href="/icon-192.svg" />
+
+    <!-- 기본 -->
     <link rel="icon" type="image/svg+xml" href="/manna-favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Dein perfekter Abend in Deutschland – Restaurant, Café & Bar in einem Kurs" />
+
     <title>MANNA · Deutschland</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Service Worker 등록 -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+        })
+      }
+    </script>
   </body>
 </html>
