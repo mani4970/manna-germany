@@ -22,7 +22,7 @@ export default function RestaurantList({ lang, L, selections, referencePoint, on
     const cuisine = selections.restaurantCuisine || 'all'
     const occasion = encodeURIComponent(selections.occasion || 'all')
     const budget = encodeURIComponent(selections.budget || 'all')
-    const base = `/api/places/search?type=restaurant&lat=${ref.lat}&lng=${ref.lng}&radius=2000&occasion=${occasion}&budget=${budget}&seed=${currentSeed}`
+    const base = `/api/places/search?type=restaurant&lat=${ref.lat}&lng=${ref.lng}&radius=1000&occasion=${occasion}&budget=${budget}&seed=${currentSeed}`
     const url = cuisine && cuisine !== 'all' ? `${base}&cuisine=${cuisine}` : base
     const res = await fetch(url)
     const data = await res.json()
@@ -66,7 +66,7 @@ export default function RestaurantList({ lang, L, selections, referencePoint, on
               {lang==='de' ? 'Neu laden' : 'Refresh'}
             </button>
           </div>
-          <p style={{ color:C.textSub,marginTop:'4px',fontSize:'13px',fontWeight:'300',textAlign:'center' }}>{displayName} · {lang==='de'?'2km Umgebung':'within 2km'}</p>
+          <p style={{ color:C.textSub,marginTop:'4px',fontSize:'13px',fontWeight:'300',textAlign:'center' }}>{displayName} · {lang==='de'?'1km Umgebung':'within 1km'}</p>
         </div>
       </div>
       <div style={{ display:'flex',gap:'8px',padding:'16px 24px',overflowX:'auto',scrollbarWidth:'none' }}>

@@ -27,7 +27,7 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
     const budget = encodeURIComponent(selections.budget || 'all')
     const cuisine = type === 'cafe' ? (selections.cafeCuisine || 'all') : (selections.barCuisine || 'all')
     const cuisineParam = cuisine && cuisine !== 'all' ? `&cuisine=${cuisine}` : ''
-    const url = `/api/places/search?type=${type}&lat=${ref.lat}&lng=${ref.lng}&radius=2000&occasion=${occasion}&budget=${budget}&seed=${currentSeed}${cuisineParam}`
+    const url = `/api/places/search?type=${type}&lat=${ref.lat}&lng=${ref.lng}&radius=1000&occasion=${occasion}&budget=${budget}&seed=${currentSeed}${cuisineParam}`
     const res = await fetch(url)
     const data = await res.json()
     setPlaces((data.places || []).map(p => ({
@@ -70,7 +70,7 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
               {lang==='de' ? 'Neu laden' : 'Refresh'}
             </button>
           </div>
-          <p style={{ color:C.textSub,marginTop:'4px',fontSize:'13px',fontWeight:'300',textAlign:'center' }}>{displayName} · {lang==='de'?'2km Umgebung':'within 2km'}</p>
+          <p style={{ color:C.textSub,marginTop:'4px',fontSize:'13px',fontWeight:'300',textAlign:'center' }}>{displayName} · {lang==='de'?'1km Umgebung':'within 1km'}</p>
         </div>
       </div>
       <div style={{ display:'flex',gap:'8px',padding:'16px 24px',overflowX:'auto',scrollbarWidth:'none' }}>

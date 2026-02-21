@@ -20,7 +20,7 @@ export default async function handler(req) {
     const type = searchParams.get('type')
     const lat = parseFloat(searchParams.get('lat'))
     const lng = parseFloat(searchParams.get('lng'))
-    const radius = parseInt(searchParams.get('radius')) || 2000
+    const radius = parseInt(searchParams.get('radius')) || 1000
     const query = searchParams.get('query')
     const occasion = searchParams.get('occasion') || 'all'
     const budget = searchParams.get('budget') || 'all'
@@ -139,6 +139,10 @@ export default async function handler(req) {
       ? cuisineTypeMap[cuisine]
       : (typeMap[type] || ['restaurant'])
 
+    // seed > 0 이면 좌표를 ±400m 랜덤 이동해서 다른 결과 풀 가져오기
+    const jitterLat = seed > 0 ? lat + (((seed * 127) % 800) - 400) / 111320 : lat
+    const jitterLng = seed > 0 ? lng + (((seed * 311) % 800) - 400) / (111320 * Math.cos(lat * Math.PI / 180)) : lng
+
     const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
       method: 'POST',
       headers: {
@@ -149,7 +153,7 @@ export default async function handler(req) {
       body: JSON.stringify({
         includedTypes,
         locationRestriction: {
-          circle: { center: { latitude: lat, longitude: lng }, radius },
+          circle: { center: { latitude: jitterLat, longitude: jitterLng }, radius },
         },
         maxResultCount: 20,
         rankPreference: 'POPULARITY',
@@ -246,14 +250,6 @@ export default async function handler(req) {
 
       return scoreB - scoreA
     })
-
-    // seed가 있으면 결과를 섞어서 다양한 결과 제공
-    if (seed > 0) {
-      for (let i = sorted.length - 1; i > 0; i--) {
-        const j = Math.floor(((seed * (i + 1)) % 2147483647) / 2147483647 * (i + 1))
-        ;[sorted[i], sorted[j]] = [sorted[j], sorted[i]]
-      }
-    }
 
     const total = sorted.length
     const paginated = sorted.slice(0, 20)
