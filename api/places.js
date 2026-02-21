@@ -22,6 +22,8 @@ export default async function handler(req) {
     const lng = parseFloat(searchParams.get('lng'))
     const radius = parseInt(searchParams.get('radius')) || 1000
     const query = searchParams.get('query')
+    const occasion = searchParams.get('occasion') || 'all'
+    const budget = searchParams.get('budget') || 'all'
 
     // ── 직접 검색 ──────────────────────────────────────────
     if (query) {
@@ -176,11 +178,70 @@ export default async function handler(req) {
     })
 
     // 반경 밖 결과 완전 제거
-    const filtered = places.filter(p => p.distanceMeters !== null && p.distanceMeters <= radius)
+    let filtered = places.filter(p => p.distanceMeters !== null && p.distanceMeters <= radius)
 
+    // Budget 필터 (priceLevel: 1=저렴, 2=보통, 3=비쌈, 4=매우비쌈)
+    const priceLevelMap = {
+      'Günstig':    [1],
+      'Budget':     [1],
+      'Mittel':     [1, 2],
+      'Moderate':   [1, 2],
+      'Besonders':  [3, 4],
+      'Special':    [3, 4],
+    }
+    const allowedPriceLevels = priceLevelMap[budget]
+    if (allowedPriceLevels) {
+      const budgetFiltered = filtered.filter(p =>
+        !p.priceLevel || allowedPriceLevels.includes(p.priceLevel)
+      )
+      // 필터 결과가 너무 적으면 필터 완화
+      if (budgetFiltered.length >= 3) filtered = budgetFiltered
+    }
+
+    // Occasion + Budget 기반 정렬 가중치
     const sorted = filtered.sort((a, b) => {
-      const scoreA = (a.rating || 0) * Math.log10((a.userRatingsTotal || 0) + 10)
-      const scoreB = (b.rating || 0) * Math.log10((b.userRatingsTotal || 0) + 10)
+      const ratingA = a.rating || 0
+      const ratingB = b.rating || 0
+      const reviewsA = Math.log10((a.userRatingsTotal || 0) + 10)
+      const reviewsB = Math.log10((b.userRatingsTotal || 0) + 10)
+      const priceA = a.priceLevel || 2
+      const priceB = b.priceLevel || 2
+
+      let scoreA = ratingA * reviewsA
+      let scoreB = ratingB * reviewsB
+
+      // Date: 평점 높고 조용한 분위기 (리뷰 많은 것보다 평점 우선)
+      if (occasion === 'Date') {
+        scoreA = ratingA * 2 + reviewsA * 0.5
+        scoreB = ratingB * 2 + reviewsB * 0.5
+      }
+      // Freunde: 리뷰 많고 활기찬 곳 우선
+      if (occasion === 'Freunde' || occasion === 'Friends') {
+        scoreA = ratingA * reviewsA * 1.2
+        scoreB = ratingB * reviewsB * 1.2
+      }
+      // Business: 평점 높고 가격대 있는 곳 우선
+      if (occasion === 'Business') {
+        scoreA = ratingA * 2 + priceA * 0.5
+        scoreB = ratingB * 2 + priceB * 0.5
+      }
+      // Familie: 리뷰 많고 평점 좋은 곳
+      if (occasion === 'Familie' || occasion === 'Family') {
+        scoreA = ratingA * reviewsA
+        scoreB = ratingB * reviewsB
+      }
+
+      // Besonders/Special: 가격대 높은 것 추가 가중치
+      if (budget === 'Besonders' || budget === 'Special') {
+        scoreA += priceA * 0.5
+        scoreB += priceB * 0.5
+      }
+      // Günstig/Budget: 가격대 낮은 것 추가 가중치
+      if (budget === 'Günstig' || budget === 'Budget') {
+        scoreA += (5 - priceA) * 0.3
+        scoreB += (5 - priceB) * 0.3
+      }
+
       return scoreB - scoreA
     })
 

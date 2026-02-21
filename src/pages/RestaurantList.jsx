@@ -18,9 +18,12 @@ export default function RestaurantList({ lang, L, selections, referencePoint, on
   useEffect(() => {
     if (!ref?.lat) return
     const cuisine = selections.restaurantCuisine || 'all'
+    const occasion = encodeURIComponent(selections.occasion || 'all')
+    const budget = encodeURIComponent(selections.budget || 'all')
+    const base = `/api/places/search?type=restaurant&lat=${ref.lat}&lng=${ref.lng}&radius=1000&occasion=${occasion}&budget=${budget}`
     const url = cuisine && cuisine !== 'all'
-      ? `/api/places/search?type=restaurant&cuisine=${cuisine}&lat=${ref.lat}&lng=${ref.lng}&radius=1000`
-      : `/api/places/search?type=restaurant&lat=${ref.lat}&lng=${ref.lng}&radius=1000`
+      ? `${base}&cuisine=${cuisine}`
+      : base
     fetch(url).then(r=>r.json()).then(data=>{
       setPlaces((data.places||[]).map(p=>({...p, distanceMeters: haversineDistance(ref.lat,ref.lng,p.lat,p.lng)})))
       setLoading(false)

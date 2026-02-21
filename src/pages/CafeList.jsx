@@ -21,7 +21,9 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
 
   useEffect(() => {
     if (!ref?.lat) return
-    fetch(`/api/places/search?type=${type}&lat=${ref.lat}&lng=${ref.lng}&radius=1000`)
+    const occasion = encodeURIComponent(selections.occasion || 'all')
+    const budget = encodeURIComponent(selections.budget || 'all')
+    fetch(`/api/places/search?type=${type}&lat=${ref.lat}&lng=${ref.lng}&radius=1000&occasion=${occasion}&budget=${budget}`)
       .then(r=>r.json()).then(data=>{
         setPlaces((data.places||[]).map(p=>({...p, distanceMeters: haversineDistance(ref.lat,ref.lng,p.lat,p.lng)})))
         setLoading(false)
