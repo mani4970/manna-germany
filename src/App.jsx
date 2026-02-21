@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import LandingPage from './pages/LandingPage'
 import CitySelect from './pages/CitySelect'
 import LocationSelect from './pages/LocationSelect'
-import OccasionSelect from './pages/OccasionSelect'
 import CourseSelect from './pages/CourseSelect'
-import BudgetSelect from './pages/BudgetSelect'
 import CuisineSelect from './pages/CuisineSelect'
 import RestaurantList from './pages/RestaurantList'
 import CafeList from './pages/CafeList'
@@ -20,13 +18,12 @@ function App() {
   const [flowType, setFlowType] = useState(null)
   const [step, setStep] = useState(0)
   const [directInputNextType, setDirectInputNextType] = useState(null)
-  const [directInputOrder, setDirectInputOrder] = useState([])
   const [courseOrder, setCourseOrder] = useState([])
   const [currentOrderIndex, setCurrentOrderIndex] = useState(0)
   const [selectedPlaces, setSelectedPlaces] = useState([])
   const [selections, setSelections] = useState({
-    city: null, hotspot: null, occasion: null,
-    courseOrder: [], budget: null,
+    city: null, hotspot: null,
+    courseOrder: [],
     restaurantCuisine: 'all', cafeCuisine: 'all', barCuisine: 'all',
     restaurant: null, cafe: null, cafe2: null,
   })
@@ -48,20 +45,20 @@ function App() {
     setStep(0); setFlowType(null)
     setDirectInputNextType(null); setCourseOrder([])
     setCurrentOrderIndex(0); setSelectedPlaces([])
-    setSelections({ city: null, hotspot: null, occasion: null, courseOrder: [], budget: null, restaurantCuisine: 'all', cafeCuisine: 'all', barCuisine: 'all', restaurant: null, cafe: null, cafe2: null })
+    setSelections({ city: null, hotspot: null, courseOrder: [], restaurantCuisine: 'all', cafeCuisine: 'all', barCuisine: 'all', restaurant: null, cafe: null, cafe2: null })
   }
 
   function handleDirectInputSelect(data) {
     setDirectInputNextType(data.nextType)
     if (data.restaurant) {
       setSelections(prev => ({ ...prev, restaurant: data.restaurant, hotspot: data.restaurant.hotspot || { name: 'Germany' } }))
-      if (data.nextType === 'cafe') { setDirectInputOrder(['restaurant', 'cafe']); setStep(200) }
-      else if (data.nextType === 'bar') { setDirectInputOrder(['restaurant', 'bar']); setStep(202) }
-      else if (data.nextType === 'both') { setDirectInputOrder(['restaurant', 'cafe', 'bar']); setStep(200) }
-      else if (data.nextType === 'restaurant') { setDirectInputOrder(['cafe', 'restaurant']); setStep(201) }
+      if (data.nextType === 'cafe') { setStep(200) }
+      else if (data.nextType === 'bar') { setStep(202) }
+      else if (data.nextType === 'both') { setStep(200) }
+      else if (data.nextType === 'restaurant') { setStep(201) }
     } else if (data.cafe) {
       setSelections(prev => ({ ...prev, cafe: data.cafe, hotspot: data.cafe.hotspot || { name: 'Germany' } }))
-      setDirectInputOrder(['cafe', 'restaurant']); setStep(201)
+      setStep(201)
     }
   }
 
@@ -77,7 +74,7 @@ function App() {
     const placeType = courseOrder[currentOrderIndex]
     if (placeType === 'restaurant') update('restaurant', place)
     else if (placeType === 'cafe' || placeType === 'bar') {
-      const count = selectedPlaces.filter((p, idx) => courseOrder[idx] === 'cafe' || courseOrder[idx] === 'bar').length
+      const count = selectedPlaces.filter((_, idx) => courseOrder[idx] === 'cafe' || courseOrder[idx] === 'bar').length
       if (count === 0) update('cafe', place)
       else update('cafe2', place)
     }
@@ -127,7 +124,7 @@ function App() {
         />
       )}
 
-      {/* Guided flow */}
+      {/* Guided flow - 4단계 */}
       {flowType === 'guided' && step === 1 && (
         <CitySelect lang={lang} L={L}
           onNext={value => { update('city', value); next() }}
@@ -141,33 +138,20 @@ function App() {
         />
       )}
       {flowType === 'guided' && step === 3 && (
-        <OccasionSelect lang={lang} L={L} city={selections.city} spot={selections.hotspot}
-          onNext={value => { update('occasion', value); next() }}
-          onBack={() => back(['hotspot'])}
-        />
-      )}
-      {flowType === 'guided' && step === 4 && (
         <CourseSelect lang={lang} L={L} selections={selections}
           onNext={handleCourseOrderSelect}
-          onBack={() => back(['occasion'])}
+          onBack={() => back(['hotspot'])}
           onHome={restart}
         />
       )}
-      {flowType === 'guided' && step === 5 && (
-        <BudgetSelect lang={lang} L={L}
-          onNext={value => { update('budget', value); next() }}
+      {flowType === 'guided' && step === 4 && (
+        <CuisineSelect lang={lang} L={L} selections={selections}
+          onNext={value => { setSelections(value); next() }}
           onBack={() => { setCourseOrder([]); setCurrentOrderIndex(0); setSelectedPlaces([]); back(['courseOrder']) }}
           onHome={restart}
         />
       )}
-      {flowType === 'guided' && step === 6 && (
-        <CuisineSelect lang={lang} L={L} selections={selections}
-          onNext={value => { setSelections(value); next() }}
-          onBack={() => back(['budget'])}
-          onHome={restart}
-        />
-      )}
-      {flowType === 'guided' && step >= 7 && step < 100 && (
+      {flowType === 'guided' && step >= 5 && step < 100 && (
         <>
           {courseOrder[currentOrderIndex] === 'restaurant' && (
             <RestaurantList lang={lang} L={L} selections={selections} referencePoint={getReferencePoint()}
@@ -199,15 +183,10 @@ function App() {
 
       {step === 100 && (
         <FinalCourse lang={lang} L={L} selections={selections} onRestart={restart}
-          directInputOrder={flowType === 'direct' ? directInputOrder : null}
+          directInputOrder={flowType === 'direct' ? [] : null}
           onBack={() => {
             if (flowType === 'direct') {
-              if (directInputNextType === 'both' && selections.cafe2) { update('cafe2', null); setStep(202) }
-              else if (directInputNextType === 'both' && selections.cafe) { update('cafe', null); setStep(200) }
-              else if (directInputNextType === 'bar') { update('cafe2', null); setStep(202) }
-              else if (directInputNextType === 'cafe') { update('cafe', null); setStep(200) }
-              else if (directInputNextType === 'restaurant') { update('restaurant', null); setStep(201) }
-              else { setSelections(prev => ({ ...prev, cafe: null, cafe2: null, restaurant: null })); setStep(50) }
+              setSelections(prev => ({ ...prev, cafe: null, cafe2: null, restaurant: null })); setStep(50)
             } else {
               const lastType = courseOrder[courseOrder.length - 1]
               if (lastType === 'restaurant') update('restaurant', null)
@@ -215,7 +194,7 @@ function App() {
               else if (lastType === 'bar') update('cafe2', null)
               setCurrentOrderIndex(courseOrder.length - 1)
               setSelectedPlaces(prev => prev.slice(0, -1))
-              setStep(6 + courseOrder.length)
+              setStep(4 + courseOrder.length)
             }
           }}
         />

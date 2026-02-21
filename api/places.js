@@ -176,7 +176,12 @@ export default async function handler(req) {
         photoUrl: p.photos?.[0]
           ? `https://places.googleapis.com/v1/${p.photos[0].name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=400`
           : null,
+        photos: (p.photos || []).slice(0, 3).map(ph =>
+          `https://places.googleapis.com/v1/${ph.name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=600`
+        ),
         primaryType: p.primaryType,
+        types: p.types || [],
+        editorialSummary: p.editorialSummary?.text || null,
         priceLevel: p.priceLevel,
         distanceMeters: dist,
         googleMapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.displayName?.text || '')}&query_place_id=${p.id}`,
