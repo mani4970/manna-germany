@@ -14,27 +14,29 @@ export function priceLabel(level) {
   return '€'.repeat(level)
 }
 
-function getServiceTags(p) {
+function getServiceTags(p, lang) {
+  const de = lang !== 'en'
   const tags = []
-  if (p.servesBeer)           tags.push({ icon: '🍺', label: 'Bier' })
-  if (p.servesWine)           tags.push({ icon: '🍷', label: 'Wein' })
+  if (p.servesBeer)           tags.push({ icon: '🍺', label: de ? 'Bier' : 'Beer' })
+  if (p.servesWine)           tags.push({ icon: '🍷', label: de ? 'Wein' : 'Wine' })
   if (p.servesBrunch)         tags.push({ icon: '🥂', label: 'Brunch' })
-  if (p.servesVegetarianFood) tags.push({ icon: '🌿', label: 'Vegetarisch' })
-  if (p.outdoorSeating)       tags.push({ icon: '☀️', label: 'Terrasse' })
-  if (p.reservable)           tags.push({ icon: '📅', label: 'Reservierung' })
-  if (p.delivery)             tags.push({ icon: '🛵', label: 'Lieferung' })
+  if (p.servesVegetarianFood) tags.push({ icon: '🌿', label: de ? 'Vegetarisch' : 'Vegetarian' })
+  if (p.outdoorSeating)       tags.push({ icon: '☀️', label: de ? 'Terrasse' : 'Outdoor' })
+  if (p.reservable)           tags.push({ icon: '📅', label: de ? 'Reservierung' : 'Reservations' })
+  if (p.delivery)             tags.push({ icon: '🛵', label: de ? 'Lieferung' : 'Delivery' })
   if (p.takeout)              tags.push({ icon: '🥡', label: 'Takeaway' })
-  if (p.liveMusic)            tags.push({ icon: '🎵', label: 'Live Musik' })
+  if (p.liveMusic)            tags.push({ icon: '🎵', label: de ? 'Live Musik' : 'Live Music' })
   return tags
 }
 
-function getVibeTag(p) {
+function getVibeTag(p, lang) {
+  const de = lang !== 'en'
   if (p.rating >= 4.8 && (p.priceLevel || 0) >= 3) return { label: 'Fine Dining', color: '#C8A0E8' }
-  if (p.rating >= 4.7) return { label: 'Top bewertet', color: '#A0C8E8' }
-  if ((p.userRatingsTotal || 0) >= 2000) return { label: 'Sehr beliebt', color: '#A0E8C8' }
-  if (p.priceLevel === 1) return { label: 'Günstig', color: '#A0E8B0' }
-  if (p.priceLevel >= 3) return { label: 'Gehoben', color: '#E8C8A0' }
-  if (p.outdoorSeating) return { label: 'Terrasse', color: '#E8E0A0' }
+  if (p.rating >= 4.7) return { label: de ? 'Top bewertet' : 'Top rated', color: '#A0C8E8' }
+  if ((p.userRatingsTotal || 0) >= 2000) return { label: de ? 'Sehr beliebt' : 'Very popular', color: '#A0E8C8' }
+  if (p.priceLevel === 1) return { label: de ? 'Günstig' : 'Budget-friendly', color: '#A0E8B0' }
+  if (p.priceLevel >= 3) return { label: de ? 'Gehoben' : 'Upscale', color: '#E8C8A0' }
+  if (p.outdoorSeating) return { label: de ? 'Terrasse' : 'Outdoor seating', color: '#E8E0A0' }
   return null
 }
 
@@ -51,7 +53,7 @@ export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }
   const [details, setDetails] = useState(null)
   const [touchStartX, setTouchStartX] = useState(null)
   const photos = place.photos?.length ? place.photos : (place.photoUrl ? [place.photoUrl] : [])
-  const vibe = getVibeTag(place)
+  const vibe = getVibeTag(place, lang)
 
   useEffect(() => {
     if (place.placeId) {
@@ -63,7 +65,7 @@ export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }
   }, [place.placeId])
 
   const merged = details ? { ...place, ...details } : place
-  const serviceTags = getServiceTags(merged)
+  const serviceTags = getServiceTags(merged, lang)
   const todayHours = getTodayHours(merged)
   const priceRange = merged.priceRange
     ? `€${merged.priceRange.startPrice?.units || ''}–€${merged.priceRange.endPrice?.units || ''}`
@@ -102,21 +104,23 @@ export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }
         }}
       >
         {/* ── 사진 영역 ── */}
-        <div style={{ position: 'relative', width: '100%', height: '300px', background: C.surface2, overflow: 'hidden' }}>
+        <div
+          style={{ position: 'relative', width: '100%', height: '300px', background: C.surface2, overflow: 'hidden' }}
+          onTouchStart={e => setTouchStartX(e.touches[0].clientX)}
+          onTouchEnd={e => {
+            if (touchStartX === null) return
+            const diff = touchStartX - e.changedTouches[0].clientX
+            if (Math.abs(diff) > 40) {
+              if (diff > 0) setPhotoIdx(i => (i + 1) % photos.length)
+              else setPhotoIdx(i => (i - 1 + photos.length) % photos.length)
+            }
+            setTouchStartX(null)
+          }}
+        >
           {photos.length > 0 ? (
             <img
               src={photos[photoIdx]} alt={place.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'opacity 0.3s' }}
-              onTouchStart={e => setTouchStartX(e.touches[0].clientX)}
-              onTouchEnd={e => {
-                if (touchStartX === null) return
-                const diff = touchStartX - e.changedTouches[0].clientX
-                if (Math.abs(diff) > 40) {
-                  if (diff > 0) setPhotoIdx(i => (i + 1) % photos.length)
-                  else setPhotoIdx(i => (i - 1 + photos.length) % photos.length)
-                }
-                setTouchStartX(null)
-              }}
             />
           ) : (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', color: C.textDim }}>🍽️</div>
@@ -242,7 +246,7 @@ export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }
             )}
             {place.distanceMeters && (
               <div style={{ fontSize: '12px', color: C.textSub, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span>🚶 {Math.round(place.distanceMeters / 80)} min {L.walk} ({place.distanceMeters}m)</span>
+                <span>🚶 {Math.round(place.distanceMeters / 80)} min {lang === 'de' ? 'zu Fuß' : 'walk'} ({place.distanceMeters}m)</span>
                 {nearestStation && (
                   <span style={{ color: C.textDim }}>🚇 ab {nearestStation.name} · {nearestStation.distanceMeters < 1000 ? nearestStation.distanceMeters + 'm' : (nearestStation.distanceMeters/1000).toFixed(1) + 'km'}</span>
                 )}
@@ -265,7 +269,7 @@ export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }
                 fontSize: '10px', letterSpacing: '2px', color: C.textDim,
                 textTransform: 'uppercase', marginBottom: '10px',
                 fontFamily: "'Outfit', sans-serif",
-              }}>Angebote</p>
+              }}>{lang === 'de' ? 'Angebote' : 'Services'}</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {serviceTags.map((t, i) => (
                   <div key={i} style={{
@@ -288,7 +292,7 @@ export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }
               <p style={{
                 fontSize: '10px', letterSpacing: '2px', color: C.textDim,
                 textTransform: 'uppercase', marginBottom: '8px',
-              }}>Über das Lokal</p>
+              }}>{lang === 'de' ? 'Über das Lokal' : 'About'}</p>
               <p style={{
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: '15px', color: C.text,
@@ -303,7 +307,7 @@ export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }
               <p style={{
                 fontSize: '10px', letterSpacing: '2px', color: C.textDim,
                 textTransform: 'uppercase', marginBottom: '10px',
-              }}>Gästestimmen</p>
+              }}>{lang === 'de' ? 'Gästestimmen' : 'Guest Reviews'}</p>
               {merged.reviews.slice(0, 2).map((r, i) => (
                 <div key={i} style={{
                   padding: '14px 16px', borderRadius: '14px',
@@ -312,7 +316,7 @@ export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                     <span style={{ fontSize: '11px', color: C.gold }}>{'★'.repeat(r.rating || 5)}</span>
-                    <span style={{ fontSize: '11px', color: C.textSub }}>{r.authorAttribution?.displayName || 'Gast'}</span>
+                    <span style={{ fontSize: '11px', color: C.textSub }}>{r.authorAttribution?.displayName || lang === 'de' ? 'Gast' : 'Guest'}</span>
                   </div>
                   <p style={{
                     fontSize: '13px', color: C.textSub, lineHeight: 1.6,
@@ -336,13 +340,13 @@ export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }
               border: `1.5px solid ${C.border}`, background: 'transparent',
               color: C.textSub, fontSize: '14px', cursor: 'pointer',
               fontFamily: "'Outfit', sans-serif",
-            }}>{L.close}</button>
+            }}>{lang === 'de' ? 'Schließen' : 'Close'}</button>
             <button onClick={() => onSelect(place)} className="no-orange-card" style={{
               flex: 2.5, padding: '15px', borderRadius: '14px',
               border: 'none', background: C.gold, color: C.bg,
               fontSize: '14px', fontWeight: '500', cursor: 'pointer',
               letterSpacing: '0.3px', fontFamily: "'Outfit', sans-serif",
-            }}>{L.select_place} →</button>
+            }}>{lang === 'de' ? 'Auswählen' : 'Select'} →</button>
           </div>
         </div>
       </div>
