@@ -70,7 +70,7 @@ export default async function handler(req) {
         })(),
       }
       return new Response(JSON.stringify({ detail }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, no-cache, must-revalidate' },
       })
     }
 
@@ -105,14 +105,14 @@ export default async function handler(req) {
         primaryType: p.primaryType,
       }))
       return new Response(JSON.stringify({ places }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, no-cache, must-revalidate' },
       })
     }
 
     // ── lat/lng 없으면 에러 ────────────────────────────────
     if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
       return new Response(JSON.stringify({ places: [], error: 'lat/lng required' }), {
-        status: 400, headers: { 'Content-Type': 'application/json' },
+        status: 400, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, no-cache, must-revalidate' },
       })
     }
 
@@ -145,7 +145,7 @@ export default async function handler(req) {
       }))
       const nearest = stations.sort((a, b) => (a.distanceMeters || 9999) - (b.distanceMeters || 9999))[0] || null
       return new Response(JSON.stringify({ station: nearest }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, no-cache, must-revalidate' },
       })
     }
 
@@ -316,12 +316,12 @@ export default async function handler(req) {
     const paginated = sorted.slice(0, 20)
     const hasMore = total > 20
     return new Response(JSON.stringify({ places: paginated, total, hasMore }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, no-cache, must-revalidate' },
     })
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message, places: [] }), {
-      status: 500, headers: { 'Content-Type': 'application/json' },
+      status: 500, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, no-cache, must-revalidate' },
     })
   }
 }
