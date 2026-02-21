@@ -165,19 +165,19 @@ export default async function handler(req) {
       steakhouse:    ['steak_house'],
       seafood:       ['seafood_restaurant'],
       vegetarian:    ['vegan_restaurant', 'vegetarian_restaurant'],
-      // Cafe
+      // Cafe — 공식 Table A 타입만
       specialty:     ['coffee_shop', 'cafe'],
-      dessert:       ['dessert_shop', 'bakery', 'cafe', 'patisserie'],
+      dessert:       ['dessert_shop', 'dessert_restaurant', 'ice_cream_shop', 'confectionery', 'bakery'],
       brunch:        ['brunch_restaurant', 'breakfast_restaurant'],
-      // Bar
-      cocktail:      ['bar', 'cocktail_bar'],
+      // Bar — cocktail_bar는 공식 타입 아님, bar만 사용
+      cocktail:      ['bar'],
       wine:          ['wine_bar'],
       craft_beer:    ['bar'],
     }
     const typeMap = {
       restaurant: ['restaurant'],
-      cafe: ['cafe', 'coffee_shop', 'bakery', 'dessert_shop'],
-      bar: ['bar', 'wine_bar', 'cocktail_bar', 'night_club'],
+      cafe: ['cafe', 'coffee_shop', 'bakery', 'dessert_shop', 'dessert_restaurant'],
+      bar: ['bar', 'wine_bar', 'pub', 'night_club'],
     }
 
     // 각 타입별로 명확히 제외할 타입들
@@ -191,7 +191,11 @@ export default async function handler(req) {
       ? cuisineTypeMap[cuisine]
       : (typeMap[type] || ['restaurant'])
 
-    const excludedTypes = excludeMap[type] || []
+    // cuisine 선택 시에는 excludedTypes 최소화 (includedTypes와 충돌 방지)
+    // cuisine='all'일 때만 전체 excludeMap 적용
+    const excludedTypes = (cuisine && cuisine !== 'all')
+      ? ['lodging', 'hotel']
+      : (excludeMap[type] || [])
 
     // seed > 0 이면 좌표를 ±400m 랜덤 이동해서 다른 결과 풀 가져오기
     const jitterLat = seed > 0 ? lat + (((seed * 127) % 800) - 400) / 111320 : lat
