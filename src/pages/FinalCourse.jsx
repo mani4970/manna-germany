@@ -43,38 +43,49 @@ export default function FinalCourse({ selections, lang, L, onRestart, onBack, co
     }
     setWalkingTimes(times)
 
-    // Google Maps
-    const initMap = () => {
-      if (!mapRef.current || !window.google) return
+    // Google Maps - async 로딩 + AdvancedMarkerElement
+    const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    if (!mapsKey) return
+
+    const initMap = async () => {
+      if (!mapRef.current || !window.google?.maps) return
       const places = orderedPlaces.filter(p => p?.lat)
       if (!places.length) return
+
+      const { Map } = await window.google.maps.importLibrary('maps')
+      const { AdvancedMarkerElement, PinElement } = await window.google.maps.importLibrary('marker')
+
       const center = { lat: places[0].lat, lng: places[0].lng }
-      const map = new window.google.maps.Map(mapRef.current, {
+      const map = new Map(mapRef.current, {
         center, zoom: 14,
         mapTypeControl: false, streetViewControl: false,
+        mapId: 'manna_map',
         styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }]
       })
+
       places.forEach((p, i) => {
-        new window.google.maps.Marker({
+        const pin = new PinElement({
+          background: C.gold,
+          borderColor: '#fff',
+          glyphColor: '#fff',
+          glyph: String(i + 1),
+        })
+        new AdvancedMarkerElement({
           position: { lat: p.lat, lng: p.lng },
           map,
-          label: { text: String(i+1), color: '#fff', fontWeight: 'bold' },
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 14,
-            fillColor: C.gold,
-            fillOpacity: 1,
-            strokeColor: '#fff',
-            strokeWeight: 2,
-          }
+          content: pin.element,
         })
       })
     }
-    const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    if (window.google?.maps) initMap()
-    else if (mapsKey) {
+
+    if (window.google?.maps) {
+      initMap()
+    } else {
+      // async 방식으로 로드
       const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsKey}`
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsKey}&loading=async&libraries=marker`
+      script.async = true
+      script.defer = true
       script.onload = initMap
       document.head.appendChild(script)
     }
@@ -111,7 +122,6 @@ export default function FinalCourse({ selections, lang, L, onRestart, onBack, co
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Outfit', sans-serif", paddingBottom: '40px' }}>
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600&family=Cormorant+Garamond:wght@300;400&display=swap" rel="stylesheet" />
 
       {/* 헤더 */}
       <div style={{ padding: '0 24px', paddingTop: '48px', paddingBottom: '28px', textAlign: 'center' }}>

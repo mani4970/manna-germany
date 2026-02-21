@@ -55,7 +55,6 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
       : (selections.barCuisine || 'all')
     const cuisineParam = cuisine && cuisine !== 'all' ? `&cuisine=${cuisine}` : ''
     const url = `/api/places/search?type=${fetchType}&lat=${ref.lat}&lng=${ref.lng}&radius=${fetchRadius}${cuisineParam}`
-    console.log(`[CafeList] fetch: type=${fetchType} radius=${fetchRadius} url=${url}`)
     const res = await fetch(url)
     const data = await res.json()
     return (data.places || []).map(p => ({
@@ -92,7 +91,6 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
 
   return (
     <div style={{ background:C.bg, minHeight:'100vh', fontFamily:"'Outfit',sans-serif", paddingBottom:'40px' }}>
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600&display=swap" rel="stylesheet" />
 
       {/* 헤더 */}
       <div style={{ padding:'44px 20px 0' }}>
