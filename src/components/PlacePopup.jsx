@@ -138,23 +138,48 @@ export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }
             }}>{vibe.label}</div>
           )}
 
-          {/* 사진 인디케이터 */}
+          {/* 좌우 화살표 */}
           {photos.length > 1 && (
-            <div style={{
-              position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
-              display: 'flex', gap: '6px',
-            }}>
-              {photos.map((_, i) => (
-                <button key={i} onClick={() => setPhotoIdx(i)} className="photo-dot no-orange-card"
-                  style={{
-                    width: i === photoIdx ? '20px' : '6px', height: '6px',
-                    borderRadius: '3px',
-                    background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.5)',
-                    border: 'none', padding: 0, cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                  }} />
-              ))}
-            </div>
+            <>
+              <button
+                onClick={e => { e.stopPropagation(); setPhotoIdx(i => (i - 1 + photos.length) % photos.length) }}
+                className="no-orange-card"
+                style={{
+                  position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
+                  background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(6px)',
+                  border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%',
+                  width: '40px', height: '40px', color: '#fff', fontSize: '20px',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  zIndex: 10, lineHeight: 1,
+                }}>‹</button>
+              <button
+                onClick={e => { e.stopPropagation(); setPhotoIdx(i => (i + 1) % photos.length) }}
+                className="no-orange-card"
+                style={{
+                  position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                  background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(6px)',
+                  border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%',
+                  width: '40px', height: '40px', color: '#fff', fontSize: '20px',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  zIndex: 10, lineHeight: 1,
+                }}>›</button>
+              {/* 인디케이터 */}
+              <div style={{
+                position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
+                display: 'flex', gap: '6px', zIndex: 10,
+              }}>
+                {photos.map((_, i) => (
+                  <button key={i} onClick={e => { e.stopPropagation(); setPhotoIdx(i) }} className="no-orange-card"
+                    style={{
+                      width: i === photoIdx ? '20px' : '6px', height: '6px',
+                      borderRadius: '3px',
+                      background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.5)',
+                      border: 'none', padding: 0, cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                    }} />
+                ))}
+              </div>
+            </>
           )}
 
           {/* 이름 오버레이 (사진 하단) */}

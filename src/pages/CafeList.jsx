@@ -108,7 +108,11 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
         </div>
       </div>
       <div style={{ display:'flex',gap:'8px',padding:'16px 24px',overflowX:'auto',scrollbarWidth:'none' }}>
-        {[['rating',L.sort_rating],['reviews',L.sort_reviews],['distance',L.sort_distance]].map(([k,label])=>(
+        {([
+          ['rating',  lang==='de' ? 'Bewertung'  : 'Rating'],
+          ['reviews', lang==='de' ? 'Rezensionen': 'Reviews'],
+          ['distance',lang==='de' ? 'Entfernung' : 'Distance'],
+        ]).map(([k,label])=>(
           <button key={k} onClick={()=>setSortBy(k)} className="no-orange-card"
             style={{ padding:'7px 14px',borderRadius:'20px',border:`1px solid ${sortBy===k?C.gold:C.border}`,background:sortBy===k?C.surface2:C.surface,color:sortBy===k?C.gold:C.textSub,fontSize:'12px',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0 }}>
             {label}
