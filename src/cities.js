@@ -105,6 +105,7 @@ export const CITIES = [
       { id: 'rheinuferpromenade', lat: 51.2254, lng: 6.7731, name_de: 'Rheinuferpromenade', name_en: 'Rhine Promenade', sub_de: 'Spazieren · Aussicht · Altstadt', sub_en: 'Walk · Views · Old Town' },
       { id: 'medienhafen', lat: 51.2130, lng: 6.7651, name_de: 'Medienhafen', name_en: 'Media Harbor', sub_de: 'Architektur · Restaurants · Bars', sub_en: 'Architecture · Restaurants · Bars' },
       { id: 'altstadt', lat: 51.2254, lng: 6.7726, name_de: 'Altstadt', name_en: 'Old Town', sub_de: 'Längste Theke · Bars · Belebte Gassen', sub_en: 'Longest Bar · Pubs · Lively Lanes' },
+      { id: 'japanviertel', lat: 51.2195, lng: 6.7942, name_de: 'Japanviertel (Immermannstr.)', name_en: 'Japan Quarter (Immermannstr.)', sub_de: 'Ramen · Sushi · Asia-Markt', sub_en: 'Ramen · Sushi · Asian Market' },
     ],
     stadtteile: [
       { id: 'pempelfort', lat: 51.2333, lng: 6.7833, name_de: 'Pempelfort', name_en: 'Pempelfort', sub_de: 'Schick · Cafés · Nordstraße', sub_en: 'Chic · Cafés · Nordstraße' },
