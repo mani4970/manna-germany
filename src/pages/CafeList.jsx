@@ -18,6 +18,7 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [selectedPopup, setSelectedPopup] = useState(null)
+  const [popupStation, setPopupStation] = useState(null)
   const [sortBy, setSortBy] = useState('rating')
   const ref = referencePoint || selections.hotspot
   const isCafe = type === 'cafe'
@@ -84,7 +85,15 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
         ) : sorted.length === 0 ? (
           <div style={{ textAlign:'center',padding:'60px 0',color:C.textSub }}>{L.no_results}</div>
         ) : sorted.map((p,i)=>(
-          <button key={p.placeId||i} onClick={()=>setSelectedPopup(p)} className="no-orange-card"
+          <button key={p.placeId||i} onClick={async ()=>{
+              setSelectedPopup(p)
+              setPopupStation(null)
+              if (p.lat && p.lng) {
+                const res = await fetch(`/api/places/search?type=subway&lat=${p.lat}&lng=${p.lng}`)
+                const data = await res.json()
+                if (data.station) setPopupStation(data.station)
+              }
+            }} className="no-orange-card"
             style={{ display:'flex',alignItems:'center',gap:'12px',padding:'14px',borderRadius:'16px',border:`1.5px solid ${C.border}`,background:C.surface,cursor:'pointer',textAlign:'left',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,0.03)',opacity:refreshing?0.5:1,transition:'opacity 0.2s' }}>
             <div style={{ width:'24px',height:'24px',borderRadius:'50%',background:i<3?C.gold:C.surface2,color:i<3?C.bg:C.textSub,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'11px',fontWeight:'600',flexShrink:0 }}>{i+1}</div>
             <div style={{ width:'64px',height:'64px',borderRadius:'10px',overflow:'hidden',flexShrink:0,background:C.surface2,display:'flex',alignItems:'center',justifyContent:'center' }}>
@@ -105,8 +114,9 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
       {selectedPopup && (
         <PlacePopup
           place={selectedPopup} lang={lang} L={L}
-          onSelect={(place) => { setSelectedPopup(null); onNext(place) }}
-          onClose={() => setSelectedPopup(null)}
+          nearestStation={popupStation}
+          onSelect={(place) => { setSelectedPopup(null); setPopupStation(null); onNext(place) }}
+          onClose={() => { setSelectedPopup(null); setPopupStation(null) }}
         />
       )}
     </div>

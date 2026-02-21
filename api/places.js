@@ -57,9 +57,17 @@ export default async function handler(req) {
         reviews: (data.reviews || []).slice(0, 2),
         regularOpeningHours: data.regularOpeningHours || null,
         priceRange: data.priceRange || null,
-        photos: (data.photos || []).slice(0, 4).map(ph =>
-          `https://places.googleapis.com/v1/${ph.name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=800`
-        ),
+        photos: (() => {
+          const allPhotos = data.photos || []
+          const sorted = [
+            ...allPhotos.filter((_, i) => i % 3 === 1),
+            ...allPhotos.filter((_, i) => i % 3 === 2),
+            ...allPhotos.filter((_, i) => i % 3 === 0),
+          ]
+          return sorted.slice(0, 6).map(ph =>
+            `https://places.googleapis.com/v1/${ph.name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=800&maxWidthPx=1200`
+          )
+        })(),
       }
       return new Response(JSON.stringify({ detail }), {
         headers: { 'Content-Type': 'application/json' },
@@ -148,7 +156,12 @@ export default async function handler(req) {
       // Restaurant
       german:        ['restaurant'],
       italian:       ['italian_restaurant'],
-      asian:         ['chinese_restaurant', 'japanese_restaurant', 'asian_restaurant', 'ramen_restaurant'],
+      japanese:      ['japanese_restaurant', 'ramen_restaurant', 'sushi_restaurant'],
+      korean:        ['korean_restaurant'],
+      chinese:       ['chinese_restaurant'],
+      thai:          ['thai_restaurant'],
+      vietnamese:    ['vietnamese_restaurant'],
+      indian:        ['indian_restaurant'],
       turkish:       ['turkish_restaurant'],
       french:        ['french_restaurant'],
       american:      ['american_restaurant', 'hamburger_restaurant'],
@@ -215,9 +228,18 @@ export default async function handler(req) {
         photoUrl: p.photos?.[0]
           ? `https://places.googleapis.com/v1/${p.photos[0].name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=400`
           : null,
-        photos: (p.photos || []).slice(0, 3).map(ph =>
-          `https://places.googleapis.com/v1/${ph.name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=600`
-        ),
+        photos: (() => {
+          const allPhotos = p.photos || []
+          // 사진을 섞어서 다양한 사진 제공 (음식/실내/외관 골고루)
+          const sorted = [
+            ...allPhotos.filter((_, i) => i % 3 === 1), // 2,5,8번 (주로 실내/음식)
+            ...allPhotos.filter((_, i) => i % 3 === 2), // 3,6,9번
+            ...allPhotos.filter((_, i) => i % 3 === 0), // 1,4,7번 (주로 외관)
+          ]
+          return sorted.slice(0, 5).map(ph =>
+            `https://places.googleapis.com/v1/${ph.name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=800&maxWidthPx=1200`
+          )
+        })(),
         primaryType: p.primaryType,
         types: p.types || [],
         editorialSummary: p.editorialSummary?.text || null,

@@ -46,7 +46,7 @@ function getTodayHours(p) {
   return entry ? entry.replace(today + ': ', '') : null
 }
 
-export function PlacePopup({ place, lang, L, onSelect, onClose }) {
+export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const [details, setDetails] = useState(null)
   const photos = place.photos?.length ? place.photos : (place.photoUrl ? [place.photoUrl] : [])
@@ -190,8 +190,11 @@ export function PlacePopup({ place, lang, L, onSelect, onClose }) {
               </div>
             )}
             {place.distanceMeters && (
-              <div style={{ fontSize: '12px', color: C.textSub }}>
-                📍 {place.distanceMeters}m · {Math.round(place.distanceMeters / 80)} min {L.walk}
+              <div style={{ fontSize: '12px', color: C.textSub, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span>🚶 {Math.round(place.distanceMeters / 80)} min {L.walk} ({place.distanceMeters}m)</span>
+                {nearestStation && (
+                  <span style={{ color: C.textDim }}>🚇 ab {nearestStation.name} · {nearestStation.distanceMeters < 1000 ? nearestStation.distanceMeters + 'm' : (nearestStation.distanceMeters/1000).toFixed(1) + 'km'}</span>
+                )}
               </div>
             )}
             {todayHours && (
