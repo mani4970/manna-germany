@@ -109,25 +109,21 @@ export default function RestaurantList({ lang, L, selections, referencePoint, on
         </div>
       </div>
 
-      {/* 탭 영역 - 두 줄 */}
-      <div style={{ padding:'12px 24px 4px', display:'flex', flexDirection:'column', gap:'8px' }}>
-        {/* 첫째 줄: 정렬 */}
-        <div style={{ display:'flex', gap:'6px', overflowX:'auto', scrollbarWidth:'none' }}>
+      {/* 탭 영역 */}
+      <div style={{ padding:'8px 20px 4px' }}>
+        {/* 정렬 + 반경 한 줄 — 모바일 스크롤 가능 */}
+        <div style={{ display:'flex', gap:'6px', overflowX:'auto', WebkitOverflowScrolling:'touch', scrollbarWidth:'none', msOverflowStyle:'none', paddingBottom:'2px' }}>
           {(['rating', 'reviews', 'distance']).map(k => (
             <button key={k} onClick={() => setSortBy(k)} className="no-orange-card"
-              style={{ padding:'6px 14px', borderRadius:'20px', border:`1px solid ${sortBy===k ? C.gold : C.border}`, background: sortBy===k ? C.surface2 : C.surface, color: sortBy===k ? C.gold : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+              style={{ padding:'6px 13px', borderRadius:'20px', border:`1px solid ${sortBy===k ? C.gold : C.border}`, background: sortBy===k ? C.surface2 : C.surface, color: sortBy===k ? C.gold : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
               {sortLabels[k]}
             </button>
           ))}
-        </div>
-        {/* 둘째 줄: 반경 */}
-        <div style={{ display:'flex', gap:'6px' }}>
-          <span style={{ fontSize:'12px', color:C.textDim, alignSelf:'center', marginRight:'2px' }}>
-            {lang === 'de' ? 'Umkreis' : 'Radius'}
-          </span>
+          {/* 구분선 */}
+          <div style={{ width:'1px', background:C.border, margin:'4px 2px', flexShrink:0 }} />
           {[[1000,'1km'],[3000,'3km'],[5000,'5km']].map(([r, label]) => (
             <button key={r} onClick={() => setRadius(r)} className="no-orange-card"
-              style={{ padding:'6px 14px', borderRadius:'20px', border:`1px solid ${radius===r ? C.gold : C.border}`, background: radius===r ? C.gold : C.surface, color: radius===r ? C.bg : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', fontWeight: radius===r ? '600' : '400' }}>
+              style={{ padding:'6px 13px', borderRadius:'20px', border:`1px solid ${radius===r ? C.gold : C.border}`, background: radius===r ? C.gold : C.surface, color: radius===r ? C.bg : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0, fontWeight: radius===r ? '600' : '400' }}>
               {label}
             </button>
           ))}

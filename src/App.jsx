@@ -160,7 +160,7 @@ function App() {
       {(flowType === 'guided' || flowType === 'location') && step >= 5 && step < 100 && (
         <>
           {courseOrder[currentOrderIndex] === 'restaurant' && (
-            <RestaurantList lang={lang} L={L} selections={selections} referencePoint={getReferencePoint()}
+            <RestaurantList key={`restaurant-${currentOrderIndex}-${step}`} lang={lang} L={L} selections={selections} referencePoint={getReferencePoint()}
               onNext={handlePlaceSelect}
               onBack={() => {
                 if (currentOrderIndex === 0) back(['restaurantCuisine', 'cafeCuisine', 'barCuisine'])
@@ -169,7 +169,7 @@ function App() {
             />
           )}
           {(courseOrder[currentOrderIndex] === 'cafe' || courseOrder[currentOrderIndex] === 'bar') && (
-            <CafeList lang={lang} L={L} selections={selections} type={courseOrder[currentOrderIndex]} referencePoint={getReferencePoint()}
+            <CafeList key={`${courseOrder[currentOrderIndex]}-${currentOrderIndex}-${step}`} lang={lang} L={L} selections={selections} type={courseOrder[currentOrderIndex]} referencePoint={getReferencePoint()}
               onNext={handlePlaceSelect}
               onBack={() => {
                 if (currentOrderIndex === 0) back(['restaurantCuisine', 'cafeCuisine', 'barCuisine'])
