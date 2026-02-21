@@ -113,21 +113,25 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
         </div>
       </div>
 
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 24px 4px', gap:'8px' }}>
-        {/* 정렬 탭 */}
+      {/* 탭 영역 - 두 줄 */}
+      <div style={{ padding:'12px 24px 4px', display:'flex', flexDirection:'column', gap:'8px' }}>
+        {/* 첫째 줄: 정렬 */}
         <div style={{ display:'flex', gap:'6px', overflowX:'auto', scrollbarWidth:'none' }}>
           {(['rating', 'reviews', 'distance']).map(k => (
             <button key={k} onClick={() => setSortBy(k)} className="no-orange-card"
-              style={{ padding:'6px 12px', borderRadius:'20px', border:`1px solid ${sortBy===k ? C.gold : C.border}`, background: sortBy===k ? C.surface2 : C.surface, color: sortBy===k ? C.gold : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+              style={{ padding:'6px 14px', borderRadius:'20px', border:`1px solid ${sortBy===k ? C.gold : C.border}`, background: sortBy===k ? C.surface2 : C.surface, color: sortBy===k ? C.gold : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
               {sortLabels[k]}
             </button>
           ))}
         </div>
-        {/* 반경 탭 */}
-        <div style={{ display:'flex', gap:'4px', flexShrink:0 }}>
+        {/* 둘째 줄: 반경 */}
+        <div style={{ display:'flex', gap:'6px' }}>
+          <span style={{ fontSize:'12px', color:C.textDim, alignSelf:'center', marginRight:'2px' }}>
+            {lang === 'de' ? 'Umkreis' : 'Radius'}
+          </span>
           {[[1000,'1km'],[3000,'3km'],[5000,'5km']].map(([r, label]) => (
             <button key={r} onClick={() => setRadius(r)} className="no-orange-card"
-              style={{ padding:'6px 10px', borderRadius:'20px', border:`1px solid ${radius===r ? C.gold : C.border}`, background: radius===r ? C.gold : C.surface, color: radius===r ? C.bg : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', fontWeight: radius===r ? '600' : '400' }}>
+              style={{ padding:'6px 14px', borderRadius:'20px', border:`1px solid ${radius===r ? C.gold : C.border}`, background: radius===r ? C.gold : C.surface, color: radius===r ? C.bg : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', fontWeight: radius===r ? '600' : '400' }}>
               {label}
             </button>
           ))}
