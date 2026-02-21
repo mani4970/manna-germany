@@ -138,44 +138,59 @@ export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }
             }}>{vibe.label}</div>
           )}
 
-          {/* 좌우 화살표 */}
+          {/* 좌우 화살표 — 고급스러운 선형 스타일 */}
           {photos.length > 1 && (
             <>
               <button
                 onClick={e => { e.stopPropagation(); setPhotoIdx(i => (i - 1 + photos.length) % photos.length) }}
                 className="no-orange-card"
                 style={{
-                  position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
-                  background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(6px)',
-                  border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%',
-                  width: '40px', height: '40px', color: '#fff', fontSize: '20px',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  zIndex: 10, lineHeight: 1,
+                  position: 'absolute', left: '0', top: '50%', transform: 'translateY(-50%)',
+                  background: 'linear-gradient(to right, rgba(0,0,0,0.45), transparent)',
+                  border: 'none', width: '56px', height: '80px',
+                  color: 'rgba(255,255,255,0.9)', fontSize: '22px', fontWeight: '200',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+                  paddingLeft: '14px', zIndex: 10,
+                  letterSpacing: '-2px',
                 }}>‹</button>
               <button
                 onClick={e => { e.stopPropagation(); setPhotoIdx(i => (i + 1) % photos.length) }}
                 className="no-orange-card"
                 style={{
-                  position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                  background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(6px)',
-                  border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%',
-                  width: '40px', height: '40px', color: '#fff', fontSize: '20px',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  zIndex: 10, lineHeight: 1,
+                  position: 'absolute', right: '0', top: '50%', transform: 'translateY(-50%)',
+                  background: 'linear-gradient(to left, rgba(0,0,0,0.45), transparent)',
+                  border: 'none', width: '56px', height: '80px',
+                  color: 'rgba(255,255,255,0.9)', fontSize: '22px', fontWeight: '200',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+                  paddingRight: '14px', zIndex: 10,
+                  letterSpacing: '-2px',
                 }}>›</button>
-              {/* 인디케이터 */}
+
+              {/* 사진 카운터 — 우상단 */}
               <div style={{
-                position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
-                display: 'flex', gap: '6px', zIndex: 10,
+                position: 'absolute', top: '16px', right: '60px',
+                background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(6px)',
+                borderRadius: '20px', padding: '3px 10px',
+                fontSize: '11px', color: 'rgba(255,255,255,0.85)',
+                letterSpacing: '0.5px', zIndex: 10,
+              }}>
+                {photoIdx + 1} / {photos.length}
+              </div>
+
+              {/* 하단 인디케이터 선 */}
+              <div style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0,
+                display: 'flex', height: '3px', zIndex: 10,
               }}>
                 {photos.map((_, i) => (
-                  <button key={i} onClick={e => { e.stopPropagation(); setPhotoIdx(i) }} className="no-orange-card"
+                  <div key={i}
+                    onClick={e => { e.stopPropagation(); setPhotoIdx(i) }}
                     style={{
-                      width: i === photoIdx ? '20px' : '6px', height: '6px',
-                      borderRadius: '3px',
-                      background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.5)',
-                      border: 'none', padding: 0, cursor: 'pointer',
-                      transition: 'all 0.3s ease',
+                      flex: 1,
+                      background: i === photoIdx ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.25)',
+                      cursor: 'pointer',
+                      transition: 'background 0.3s',
+                      margin: '0 1px',
                     }} />
                 ))}
               </div>
