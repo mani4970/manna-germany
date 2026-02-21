@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { C } from './LandingPage'
+import { C } from '../pages/LandingPage'
 
 function haversineDistance(lat1, lon1, lat2, lon2) {
   if (!lat1||!lon1||!lat2||!lon2) return null
