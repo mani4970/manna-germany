@@ -27,6 +27,45 @@ export default async function handler(req) {
     const offset = parseInt(searchParams.get('offset')) || 0
     const seed = parseInt(searchParams.get('seed')) || 0
 
+    // ── 장소 상세 정보 ────────────────────────────────────
+    const action = searchParams.get('action')
+    if (action === 'detail') {
+      const placeId = searchParams.get('placeId')
+      if (!placeId) return new Response(JSON.stringify({ error: 'placeId required' }), { status: 400 })
+      const res = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
+        headers: {
+          'X-Goog-Api-Key': GOOGLE_API_KEY,
+          'X-Goog-FieldMask': 'servesBeer,servesWine,servesBrunch,servesBreakfast,servesLunch,servesDinner,servesVegetarianFood,outdoorSeating,reservable,delivery,takeout,liveMusic,editorialSummary,reviews,regularOpeningHours,priceRange,photos',
+          'X-Goog-LanguageCode': 'de',
+        }
+      })
+      const data = await res.json()
+      const detail = {
+        servesBeer: data.servesBeer || false,
+        servesWine: data.servesWine || false,
+        servesBrunch: data.servesBrunch || false,
+        servesBreakfast: data.servesBreakfast || false,
+        servesLunch: data.servesLunch || false,
+        servesDinner: data.servesDinner || false,
+        servesVegetarianFood: data.servesVegetarianFood || false,
+        outdoorSeating: data.outdoorSeating || false,
+        reservable: data.reservable || false,
+        delivery: data.delivery || false,
+        takeout: data.takeout || false,
+        liveMusic: data.liveMusic || false,
+        editorialSummary: data.editorialSummary?.text || null,
+        reviews: (data.reviews || []).slice(0, 2),
+        regularOpeningHours: data.regularOpeningHours || null,
+        priceRange: data.priceRange || null,
+        photos: (data.photos || []).slice(0, 4).map(ph =>
+          `https://places.googleapis.com/v1/${ph.name}/media?key=${GOOGLE_API_KEY}&maxHeightPx=800`
+        ),
+      }
+      return new Response(JSON.stringify({ detail }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     // ── 직접 검색 ──────────────────────────────────────────
     if (query) {
       const res = await fetch('https://places.googleapis.com/v1/places:searchText', {

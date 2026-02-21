@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { C } from './LandingPage'
+import { PlacePopup, priceLabel } from '../components/PlacePopup'
 
 function haversineDistance(lat1, lon1, lat2, lon2) {
   if (!lat1||!lon1||!lat2||!lon2) return null
@@ -9,111 +10,8 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   return Math.round(2*R*Math.asin(Math.sqrt(a)))
 }
 
-function priceLabel(level) {
-  if (!level) return null
-  return '€'.repeat(level)
-}
 
-function getTags(p, L) {
-  const tags = []
-  if (p.rating >= 4.7) tags.push({ label: L.tag_romantic, color: '#E8A0A0' })
-  if ((p.userRatingsTotal || 0) >= 1000) tags.push({ label: L.tag_popular, color: '#A0C8E8' })
-  if (p.priceLevel === 1) tags.push({ label: L.tag_budget, color: '#A0E8B0' })
-  if (p.priceLevel >= 3) tags.push({ label: L.tag_upscale, color: '#C8A0E8' })
-  if (p.types?.includes('night_club') || p.types?.includes('bar')) tags.push({ label: L.tag_nightlife, color: '#E8C8A0' })
-  return tags.slice(0, 2)
-}
 
-function PlacePopup({ place, lang, L, onSelect, onClose }) {
-  const [photoIdx, setPhotoIdx] = useState(0)
-  const photos = place.photos?.length ? place.photos : (place.photoUrl ? [place.photoUrl] : [])
-  const tags = getTags(place, L)
-
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-      zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-    }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: C.bg, borderRadius: '20px 20px 0 0',
-        width: '100%', maxWidth: '600px', maxHeight: '85vh',
-        overflow: 'auto', paddingBottom: '32px',
-      }}>
-        {/* 사진 */}
-        <div style={{ position: 'relative', width: '100%', height: '220px', background: C.surface2 }}>
-          {photos.length > 0 ? (
-            <img src={photos[photoIdx]} alt={place.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '40px' }}>🍽️</div>
-          )}
-          {photos.length > 1 && (
-            <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px' }}>
-              {photos.map((_, i) => (
-                <button key={i} onClick={() => setPhotoIdx(i)} className="no-orange-card"
-                  style={{ width: '6px', height: '6px', borderRadius: '50%', background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.5)', border: 'none', padding: 0, cursor: 'pointer' }} />
-              ))}
-            </div>
-          )}
-          <button onClick={onClose} className="no-orange-card"
-            style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.4)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#fff', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-        </div>
-
-        {/* 정보 */}
-        <div style={{ padding: '20px 20px 0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '400', color: C.text, flex: 1, marginRight: '8px' }}>{place.name}</h2>
-            {place.priceLevel && (
-              <span style={{ fontSize: '14px', color: C.textSub, flexShrink: 0 }}>{priceLabel(place.priceLevel)}</span>
-            )}
-          </div>
-
-          {place.rating && (
-            <p style={{ color: C.goldDim, fontSize: '13px', marginTop: '4px' }}>
-              ⭐ {place.rating} ({place.userRatingsTotal?.toLocaleString()})
-            </p>
-          )}
-
-          {place.distanceMeters && (
-            <p style={{ color: C.textSub, fontSize: '12px', marginTop: '4px' }}>
-              {place.distanceMeters}m · {Math.round(place.distanceMeters / 80)} min {L.walk}
-            </p>
-          )}
-
-          {/* 태그 */}
-          {tags.length > 0 && (
-            <div style={{ display: 'flex', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
-              {tags.map((t, i) => (
-                <span key={i} style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', background: t.color + '30', color: t.color, fontWeight: '400' }}>{t.label}</span>
-              ))}
-            </div>
-          )}
-
-          {/* 설명 */}
-          {place.editorialSummary && (
-            <p style={{ color: C.textSub, fontSize: '13px', marginTop: '12px', lineHeight: 1.6 }}>{place.editorialSummary}</p>
-          )}
-
-          {place.address && (
-            <p style={{ color: C.textSub, fontSize: '12px', marginTop: '8px' }}>📍 {place.address}</p>
-          )}
-        </div>
-
-        {/* 버튼 */}
-        <div style={{ display: 'flex', gap: '10px', padding: '20px 20px 0' }}>
-          <button onClick={onClose} className="no-orange-card"
-            style={{ flex: 1, padding: '14px', borderRadius: '14px', border: `1.5px solid ${C.border}`, background: C.surface, color: C.textSub, fontSize: '14px', cursor: 'pointer' }}>
-            {L.close}
-          </button>
-          <button onClick={() => onSelect(place)} className="no-orange-card"
-            style={{ flex: 2, padding: '14px', borderRadius: '14px', border: 'none', background: C.gold, color: C.bg, fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
-            {L.select_place} →
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export default function RestaurantList({ lang, L, selections, referencePoint, onNext, onBack }) {
   const [places, setPlaces] = useState([])
