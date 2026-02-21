@@ -54,23 +54,23 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
   const [radius, setRadius] = useState(1000)
   const ref = referencePoint || selections.hotspot
 
-  const isCafe     = type === 'cafe'
-  const emoji      = isCafe ? '☕' : '🍺'
-  const title      = isCafe ? 'Café' : 'Bar'
-  const walkLabel  = lang === 'de' ? 'zu Fuß' : 'walk'
+  const isBar     = type === 'bar'
+  const emoji     = isBar ? '🍺' : '☕'
+  const title     = isBar ? 'Bar' : 'Café'
+  const walkLabel = lang === 'de' ? 'zu Fuß' : 'walk'
   const sortLabels = lang === 'de'
     ? { rating: 'Bewertung', reviews: 'Rezensionen', distance: 'Entfernung' }
-    : { rating: 'Rating',    reviews: 'Reviews',     distance: 'Distance' }
-  const loadingText  = isCafe
-    ? (lang === 'de' ? 'Suche Cafés...'  : 'Finding cafés...')
-    : (lang === 'de' ? 'Suche Bars...'   : 'Finding bars...')
-  const noResults = lang === 'de' ? 'Keine Ergebnisse gefunden' : 'No results found'
+    : { rating: 'Rating', reviews: 'Reviews', distance: 'Distance' }
+  const loadingText = isBar
+    ? (lang === 'de' ? 'Suche Bars...' : 'Finding bars...')
+    : (lang === 'de' ? 'Suche Cafés...' : 'Finding cafés...')
 
-  const fetchPlaces = async (seed = 0, r = radius) => {
+  // type이나 radius 바뀔 때마다 새로 검색
+  const fetchPlaces = async (r, t) => {
     if (!ref?.lat) return
-    const cuisine = type === 'cafe' ? (selections.cafeCuisine || 'all') : (selections.barCuisine || 'all')
+    const cuisine = t === 'cafe' ? (selections.cafeCuisine || 'all') : (selections.barCuisine || 'all')
     const cuisineParam = cuisine && cuisine !== 'all' ? `&cuisine=${cuisine}` : ''
-    const url = `/api/places/search?type=${type}&lat=${ref.lat}&lng=${ref.lng}&radius=${r}&seed=${seed}${cuisineParam}`
+    const url = `/api/places/search?type=${t}&lat=${ref.lat}&lng=${ref.lng}&radius=${r}${cuisineParam}`
     const res = await fetch(url)
     const data = await res.json()
     setPlaces((data.places || []).map(p => ({
@@ -78,15 +78,18 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
     })))
   }
 
-  useEffect(() => { fetchPlaces(0, 1000).finally(() => setLoading(false)) }, [])
   useEffect(() => {
     setLoading(true)
-    fetchPlaces(0, radius).finally(() => setLoading(false))
+    fetchPlaces(1000, type).finally(() => setLoading(false))
+  }, [type]) // type 바뀌면 무조건 새로 검색
+
+  useEffect(() => {
+    setLoading(true)
+    fetchPlaces(radius, type).finally(() => setLoading(false))
   }, [radius])
 
-
   const sorted = [...places].sort((a, b) => {
-    if (sortBy === 'rating')  return ((b.rating||0) * Math.log10((b.userRatingsTotal||0)+10)) - ((a.rating||0) * Math.log10((a.userRatingsTotal||0)+10))
+    if (sortBy === 'rating')  return ((b.rating||0)*Math.log10((b.userRatingsTotal||0)+10)) - ((a.rating||0)*Math.log10((a.userRatingsTotal||0)+10))
     if (sortBy === 'reviews') return (b.userRatingsTotal||0) - (a.userRatingsTotal||0)
     return (a.distanceMeters||9999) - (b.distanceMeters||9999)
   })
@@ -95,50 +98,58 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
   const displayName = spotName || ref?.name || ''
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Outfit', sans-serif", paddingBottom: '40px' }}>
+    <div style={{ background:C.bg, minHeight:'100vh', fontFamily:"'Outfit',sans-serif", paddingBottom:'40px' }}>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600&display=swap" rel="stylesheet" />
 
-      <div style={{ padding: '24px 24px 0' }}>
-        <div style={{ paddingTop: '20px' }}>
-          <button onClick={onBack} className="no-orange-card"
-            style={{ background:'none', border:'none', color:C.textSub, fontSize:'14px', cursor:'pointer', padding:'0 0 16px 0', display:'flex', alignItems:'center', gap:'4px' }}>
-            {L.back}
-          </button>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'12px' }}>
-            <h1 style={{ fontSize:'22px', fontWeight:'300', color:C.text, letterSpacing:'-0.3px' }}>{emoji} {title}</h1>
-          </div>
-          <p style={{ color:C.textSub, marginTop:'4px', fontSize:'13px', fontWeight:'300', textAlign:'center' }}>
-            {displayName}
-          </p>
-        </div>
+      {/* 헤더 */}
+      <div style={{ padding:'44px 20px 0' }}>
+        <button onClick={onBack} className="no-orange-card"
+          style={{ background:'none', border:'none', color:C.textSub, fontSize:'14px', cursor:'pointer', padding:'0 0 12px 0', display:'flex', alignItems:'center', gap:'4px' }}>
+          {L.back}
+        </button>
+        <h1 style={{ fontSize:'22px', fontWeight:'300', color:C.text, textAlign:'center', margin:'0 0 4px' }}>{emoji} {title}</h1>
+        <p style={{ color:C.textSub, fontSize:'13px', fontWeight:'300', textAlign:'center', margin:'0 0 16px' }}>{displayName}</p>
       </div>
 
-      {/* 탭 영역 */}
-      <div style={{ padding:'8px 20px 4px' }}>
-        {/* 정렬 + 반경 한 줄 — 모바일 스크롤 가능 */}
-        <div style={{ display:'flex', gap:'6px', overflowX:'auto', WebkitOverflowScrolling:'touch', scrollbarWidth:'none', msOverflowStyle:'none', paddingBottom:'2px' }}>
-          {(['rating', 'reviews', 'distance']).map(k => (
+      {/* 탭 — 가로 스크롤 */}
+      <div style={{ paddingLeft:'20px', paddingRight:'20px', paddingBottom:'8px' }}>
+        <div style={{
+          display:'flex', gap:'6px',
+          overflowX:'scroll',
+          WebkitOverflowScrolling:'touch',
+          scrollbarWidth:'none',
+          msOverflowStyle:'none',
+        }}>
+          {[
+            ['rating',   sortLabels.rating],
+            ['reviews',  sortLabels.reviews],
+            ['distance', sortLabels.distance],
+          ].map(([k, label]) => (
             <button key={k} onClick={() => setSortBy(k)} className="no-orange-card"
-              style={{ padding:'6px 13px', borderRadius:'20px', border:`1px solid ${sortBy===k ? C.gold : C.border}`, background: sortBy===k ? C.surface2 : C.surface, color: sortBy===k ? C.gold : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
-              {sortLabels[k]}
+              style={{ padding:'7px 14px', borderRadius:'20px', border:`1px solid ${sortBy===k ? C.gold : C.border}`, background:sortBy===k ? C.surface2 : C.surface, color:sortBy===k ? C.gold : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+              {label}
             </button>
           ))}
-          {/* 구분선 */}
-          <div style={{ width:'1px', background:C.border, margin:'4px 2px', flexShrink:0 }} />
+
+          <div style={{ width:'1px', background:C.border, margin:'2px 4px', flexShrink:0 }} />
+
           {[[1000,'1km'],[3000,'3km'],[5000,'5km']].map(([r, label]) => (
             <button key={r} onClick={() => setRadius(r)} className="no-orange-card"
-              style={{ padding:'6px 13px', borderRadius:'20px', border:`1px solid ${radius===r ? C.gold : C.border}`, background: radius===r ? C.gold : C.surface, color: radius===r ? C.bg : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0, fontWeight: radius===r ? '600' : '400' }}>
+              style={{ padding:'7px 14px', borderRadius:'20px', border:`1px solid ${radius===r ? C.gold : C.border}`, background:radius===r ? C.gold : C.surface, color:radius===r ? C.bg : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0, fontWeight:radius===r ? '600' : '400' }}>
               {label}
             </button>
           ))}
         </div>
       </div>
 
-      <div style={{ padding:'0 24px', display:'flex', flexDirection:'column', gap:'10px' }}>
+      {/* 리스트 */}
+      <div style={{ padding:'0 20px', display:'flex', flexDirection:'column', gap:'10px' }}>
         {loading ? (
           <div style={{ textAlign:'center', padding:'60px 0', color:C.textSub }}>{loadingText}</div>
         ) : sorted.length === 0 ? (
-          <div style={{ textAlign:'center', padding:'60px 0', color:C.textSub }}>{noResults}</div>
+          <div style={{ textAlign:'center', padding:'60px 0', color:C.textSub }}>
+            {lang === 'de' ? 'Keine Ergebnisse gefunden' : 'No results found'}
+          </div>
         ) : sorted.map((p, i) => (
           <button key={p.placeId||i}
             onClick={async () => {
@@ -151,48 +162,26 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
               }
             }}
             className="no-orange-card"
-            style={{ display:'flex', alignItems:'center', gap:'12px', padding:'14px', borderRadius:'16px', border:`1.5px solid ${C.border}`, background:C.surface, cursor:'pointer', textAlign:'left', width:'100%', boxShadow:'0 2px 8px rgba(0,0,0,0.03)', transition:'opacity 0.2s' }}>
-
-            <div style={{ width:'24px', height:'24px', borderRadius:'50%', background: i<3 ? C.gold : C.surface2, color: i<3 ? C.bg : C.textSub, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'600', flexShrink:0 }}>
-              {i+1}
-            </div>
-
+            style={{ display:'flex', alignItems:'center', gap:'12px', padding:'14px', borderRadius:'16px', border:`1.5px solid ${C.border}`, background:C.surface, cursor:'pointer', textAlign:'left', width:'100%', boxShadow:'0 2px 8px rgba(0,0,0,0.03)' }}>
+            <div style={{ width:'24px', height:'24px', borderRadius:'50%', background:i<3?C.gold:C.surface2, color:i<3?C.bg:C.textSub, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'600', flexShrink:0 }}>{i+1}</div>
             <div style={{ width:'64px', height:'64px', borderRadius:'10px', overflow:'hidden', flexShrink:0, background:C.surface2, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              {p.photoUrl
-                ? <img src={p.photoUrl} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => e.target.style.display='none'} />
-                : <span style={{ fontSize:'24px' }}>{emoji}</span>
-              }
+              {p.photoUrl ? <img src={p.photoUrl} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e=>e.target.style.display='none'} /> : <span style={{ fontSize:'24px' }}>{emoji}</span>}
             </div>
-
             <div style={{ flex:1, minWidth:0 }}>
-              <p style={{ fontWeight:'400', fontSize:'14px', color:C.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{p.name}</p>
+              <p style={{ fontWeight:'400', fontSize:'14px', color:C.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', margin:0 }}>{p.name}</p>
               <div style={{ display:'flex', alignItems:'center', gap:'6px', marginTop:'3px', flexWrap:'wrap' }}>
-                {getTypeTag(p, lang) && (
-                  <span style={{ fontSize:'11px', color:C.textSub, background:C.surface2, padding:'1px 7px', borderRadius:'10px', flexShrink:0 }}>
-                    {getTypeTag(p, lang)}
-                  </span>
-                )}
-                {p.rating && (
-                  <span style={{ color:C.goldDim, fontSize:'12px' }}>
-                    ★ {p.rating} <span style={{ color:C.textDim }}>({p.userRatingsTotal?.toLocaleString()})</span>
-                  </span>
-                )}
+                {getTypeTag(p,lang) && <span style={{ fontSize:'11px', color:C.textSub, background:C.surface2, padding:'1px 7px', borderRadius:'10px', flexShrink:0 }}>{getTypeTag(p,lang)}</span>}
+                {p.rating && <span style={{ color:C.goldDim, fontSize:'12px' }}>★ {p.rating} <span style={{ color:C.textDim }}>({p.userRatingsTotal?.toLocaleString()})</span></span>}
                 {p.priceLevel && <span style={{ color:C.textSub, fontSize:'12px' }}>{priceLabel(p.priceLevel)}</span>}
               </div>
-              {p.distanceMeters && (
-                <p style={{ color:C.textSub, fontSize:'11px', marginTop:'2px' }}>
-                  {p.distanceMeters}m · {Math.round(p.distanceMeters/80)} min {walkLabel}
-                </p>
-              )}
+              {p.distanceMeters && <p style={{ color:C.textSub, fontSize:'11px', margin:'2px 0 0' }}>{p.distanceMeters}m · {Math.round(p.distanceMeters/80)} min {walkLabel}</p>}
             </div>
           </button>
         ))}
       </div>
 
       {selectedPopup && (
-        <PlacePopup
-          place={selectedPopup} lang={lang} L={L}
-          nearestStation={popupStation}
+        <PlacePopup place={selectedPopup} lang={lang} L={L} nearestStation={popupStation}
           onSelect={place => { setSelectedPopup(null); setPopupStation(null); onNext(place) }}
           onClose={() => { setSelectedPopup(null); setPopupStation(null) }}
         />
