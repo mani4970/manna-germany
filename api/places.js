@@ -156,11 +156,7 @@ export default async function handler(req) {
       // Restaurant
       german:        ['restaurant'],
       italian:       ['italian_restaurant'],
-      japanese:      ['japanese_restaurant', 'ramen_restaurant', 'sushi_restaurant'],
-      korean:        ['korean_restaurant'],
-      chinese:       ['chinese_restaurant'],
-      thai:          ['thai_restaurant'],
-      vietnamese:    ['vietnamese_restaurant'],
+      asian:         ['japanese_restaurant', 'korean_restaurant', 'chinese_restaurant', 'thai_restaurant', 'vietnamese_restaurant', 'ramen_restaurant', 'sushi_restaurant', 'asian_restaurant'],
       indian:        ['indian_restaurant'],
       turkish:       ['turkish_restaurant'],
       french:        ['french_restaurant'],
@@ -169,7 +165,6 @@ export default async function handler(req) {
       steakhouse:    ['steak_house'],
       seafood:       ['seafood_restaurant'],
       vegetarian:    ['vegan_restaurant', 'vegetarian_restaurant'],
-      pizza:         ['pizza_restaurant'],
       // Cafe
       specialty:     ['coffee_shop', 'cafe'],
       bakery:        ['bakery'],

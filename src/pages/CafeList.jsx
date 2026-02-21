@@ -2,6 +2,42 @@ import { useState, useEffect } from 'react'
 import { C } from './LandingPage'
 import { PlacePopup, priceLabel } from '../components/PlacePopup'
 
+
+const TYPE_TAG_MAP = {
+  japanese_restaurant:    { label: '🇯🇵 Japanisch', labelEn: '🇯🇵 Japanese' },
+  ramen_restaurant:       { label: '🍜 Ramen',      labelEn: '🍜 Ramen' },
+  sushi_restaurant:       { label: '🍣 Sushi',      labelEn: '🍣 Sushi' },
+  korean_restaurant:      { label: '🇰🇷 Koreanisch', labelEn: '🇰🇷 Korean' },
+  chinese_restaurant:     { label: '🇨🇳 Chinesisch', labelEn: '🇨🇳 Chinese' },
+  thai_restaurant:        { label: '🇹🇭 Thailändisch', labelEn: '🇹🇭 Thai' },
+  vietnamese_restaurant:  { label: '🇻🇳 Vietnamesisch', labelEn: '🇻🇳 Vietnamese' },
+  indian_restaurant:      { label: '🇮🇳 Indisch',   labelEn: '🇮🇳 Indian' },
+  italian_restaurant:     { label: '🇮🇹 Italienisch', labelEn: '🇮🇹 Italian' },
+  french_restaurant:      { label: '🇫🇷 Französisch', labelEn: '🇫🇷 French' },
+  turkish_restaurant:     { label: '🇹🇷 Türkisch',  labelEn: '🇹🇷 Turkish' },
+  greek_restaurant:       { label: '🇬🇷 Griechisch', labelEn: '🇬🇷 Greek' },
+  mediterranean_restaurant: { label: '🫒 Mediterran', labelEn: '🫒 Mediterranean' },
+  american_restaurant:    { label: '🍔 Amerikanisch', labelEn: '🍔 American' },
+  hamburger_restaurant:   { label: '🍔 Burger',     labelEn: '🍔 Burger' },
+  steak_house:            { label: '🥩 Steakhouse', labelEn: '🥩 Steakhouse' },
+  seafood_restaurant:     { label: '🦞 Meeresfrüchte', labelEn: '🦞 Seafood' },
+  vegan_restaurant:       { label: '🌱 Vegan',      labelEn: '🌱 Vegan' },
+  vegetarian_restaurant:  { label: '🥗 Vegetarisch', labelEn: '🥗 Vegetarian' },
+  bakery:                 { label: '🥐 Bäckerei',   labelEn: '🥐 Bakery' },
+  coffee_shop:            { label: '☕ Coffee',      labelEn: '☕ Coffee' },
+  wine_bar:               { label: '🍷 Weinbar',    labelEn: '🍷 Wine Bar' },
+  cocktail_bar:           { label: '🍸 Cocktailbar', labelEn: '🍸 Cocktail Bar' },
+  night_club:             { label: '🎵 Club',        labelEn: '🎵 Club' },
+}
+
+function getTypeTag(p, lang) {
+  const type = p.primaryType
+  if (!type) return null
+  const tag = TYPE_TAG_MAP[type]
+  if (!tag) return null
+  return lang === 'de' ? tag.label : tag.labelEn
+}
+
 function haversineDistance(lat1, lon1, lat2, lon2) {
   if (!lat1||!lon1||!lat2||!lon2) return null
   const toRad = x => x*Math.PI/180, R=6371000
@@ -101,8 +137,11 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
             </div>
             <div style={{ flex:1, minWidth:0 }}>
               <p style={{ fontWeight:'400',fontSize:'14px',color:C.text,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{p.name}</p>
-              <div style={{ display:'flex',alignItems:'center',gap:'8px',marginTop:'2px' }}>
-                {p.rating&&<span style={{ color:C.goldDim,fontSize:'12px' }}>⭐ {p.rating}</span>}
+              <div style={{ display:'flex',alignItems:'center',gap:'6px',marginTop:'3px',flexWrap:'wrap' }}>
+                {getTypeTag(p, lang) && (
+                  <span style={{ fontSize:'11px',color:C.textSub,background:C.surface2,padding:'1px 7px',borderRadius:'10px',flexShrink:0 }}>{getTypeTag(p, lang)}</span>
+                )}
+                {p.rating&&<span style={{ color:C.goldDim,fontSize:'12px' }}>★ {p.rating}</span>}
                 {p.priceLevel&&<span style={{ color:C.textSub,fontSize:'12px' }}>{priceLabel(p.priceLevel)}</span>}
               </div>
               {p.distanceMeters&&<p style={{ color:C.textSub,fontSize:'11px',marginTop:'2px' }}>{p.distanceMeters}m · {Math.round(p.distanceMeters/80)} min {L.walk}</p>}
