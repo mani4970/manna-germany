@@ -17,15 +17,18 @@ function App() {
   const [flowType, setFlowType] = useState(null)
   const [step, setStep] = useState(0)
   const [courseOrder, setCourseOrder] = useState([])
-  const [currentOrderIndex, setCurrentOrderIndex] = useState(0)
-  const [selectedPlaces, setSelectedPlaces] = useState([]) // ← 핵심: 순서대로 배열로 저장
+  const [selectedPlaces, setSelectedPlaces] = useState([])
   const [gpsError, setGpsError] = useState(null)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [selections, setSelections] = useState({
-    city: null, hotspot: null,
-    courseOrder: [],
+    city: null, hotspot: null, courseOrder: [],
     restaurantCuisine: 'all', cafeCuisine: 'all', barCuisine: 'all',
   })
+
+  // step 5 = 첫번째 장소, 6 = 두번째, 7 = 세번째
+  // currentOrderIndex = step - 5
+  const currentOrderIndex = step >= 5 && step < 100 ? step - 5 : 0
+  const currentType = courseOrder[currentOrderIndex] || null
 
   const update = (key, value) => setSelections(prev => ({ ...prev, [key]: value }))
   const next = () => setStep(prev => prev + 1)
@@ -42,7 +45,7 @@ function App() {
 
   const restart = () => {
     setStep(0); setFlowType(null)
-    setCourseOrder([]); setCurrentOrderIndex(0); setSelectedPlaces([])
+    setCourseOrder([]); setSelectedPlaces([])
     setGpsError(null); setGpsLoading(false)
     setSelections({ city: null, hotspot: null, courseOrder: [], restaurantCuisine: 'all', cafeCuisine: 'all', barCuisine: 'all' })
   }
@@ -77,25 +80,22 @@ function App() {
   function handleCourseOrderSelect(data) {
     setCourseOrder(data.courseOrder)
     setSelections(prev => ({ ...prev, courseOrder: data.courseOrder }))
-    setCurrentOrderIndex(0)
     setSelectedPlaces([])
     next()
   }
 
   function handlePlaceSelect(place) {
-    // 항상 배열에 순서대로 push
     const newPlaces = [...selectedPlaces, place]
     setSelectedPlaces(newPlaces)
-
-    if (currentOrderIndex < courseOrder.length - 1) {
-      setCurrentOrderIndex(prev => prev + 1)
-      next()
+    if (newPlaces.length < courseOrder.length) {
+      next() // step만 올리면 currentOrderIndex도 자동으로 올라감
     } else {
       setStep(100)
     }
   }
 
   function getReferencePoint() {
+    // currentOrderIndex === 0이면 출발지(hotspot), 그 이후엔 이전 선택 장소
     if (currentOrderIndex === 0) return selections.hotspot
     return selectedPlaces[currentOrderIndex - 1]
   }
@@ -141,10 +141,7 @@ function App() {
       {(flowType === 'guided' || flowType === 'location') && step === 3 && (
         <CourseSelect lang={lang} L={L} selections={selections}
           onNext={handleCourseOrderSelect}
-          onBack={() => {
-            if (flowType === 'location') restart()
-            else back(['hotspot'])
-          }}
+          onBack={() => { if (flowType === 'location') restart(); else back(['hotspot']) }}
           onHome={restart}
         />
       )}
@@ -152,32 +149,37 @@ function App() {
       {(flowType === 'guided' || flowType === 'location') && step === 4 && (
         <CuisineSelect lang={lang} L={L} selections={selections}
           onNext={value => { setSelections(value); next() }}
-          onBack={() => { setCourseOrder([]); setCurrentOrderIndex(0); setSelectedPlaces([]); back(['courseOrder']) }}
+          onBack={() => { setCourseOrder([]); setSelectedPlaces([]); back(['courseOrder']) }}
           onHome={restart}
         />
       )}
 
-      {(flowType === 'guided' || flowType === 'location') && step >= 5 && step < 100 && (
-        <>
-          {courseOrder[currentOrderIndex] === 'restaurant' && (
-            <RestaurantList key={`restaurant-${currentOrderIndex}-${step}`} lang={lang} L={L} selections={selections} referencePoint={getReferencePoint()}
-              onNext={handlePlaceSelect}
-              onBack={() => {
-                if (currentOrderIndex === 0) back(['restaurantCuisine', 'cafeCuisine', 'barCuisine'])
-                else { setCurrentOrderIndex(prev => prev - 1); setSelectedPlaces(prev => prev.slice(0, -1)); back() }
-              }}
-            />
-          )}
-          {(courseOrder[currentOrderIndex] === 'cafe' || courseOrder[currentOrderIndex] === 'bar') && (
-            <CafeList key={`${courseOrder[currentOrderIndex]}-${currentOrderIndex}-${step}`} lang={lang} L={L} selections={selections} type={courseOrder[currentOrderIndex]} referencePoint={getReferencePoint()}
-              onNext={handlePlaceSelect}
-              onBack={() => {
-                if (currentOrderIndex === 0) back(['restaurantCuisine', 'cafeCuisine', 'barCuisine'])
-                else { setCurrentOrderIndex(prev => prev - 1); setSelectedPlaces(prev => prev.slice(0, -1)); back() }
-              }}
-            />
-          )}
-        </>
+      {/* 리스트 — step으로 currentType 결정, key로 완전 분리 */}
+      {(flowType === 'guided' || flowType === 'location') && step >= 5 && step < 100 && currentType === 'restaurant' && (
+        <RestaurantList
+          key={`restaurant-step${step}`}
+          lang={lang} L={L} selections={selections}
+          referencePoint={getReferencePoint()}
+          onNext={handlePlaceSelect}
+          onBack={() => {
+            if (currentOrderIndex === 0) back(['restaurantCuisine', 'cafeCuisine', 'barCuisine'])
+            else { setSelectedPlaces(prev => prev.slice(0, -1)); back() }
+          }}
+        />
+      )}
+
+      {(flowType === 'guided' || flowType === 'location') && step >= 5 && step < 100 && (currentType === 'cafe' || currentType === 'bar') && (
+        <CafeList
+          key={`${currentType}-step${step}`}
+          lang={lang} L={L} selections={selections}
+          type={currentType}
+          referencePoint={getReferencePoint()}
+          onNext={handlePlaceSelect}
+          onBack={() => {
+            if (currentOrderIndex === 0) back(['restaurantCuisine', 'cafeCuisine', 'barCuisine'])
+            else { setSelectedPlaces(prev => prev.slice(0, -1)); back() }
+          }}
+        />
       )}
 
       {step === 100 && (
@@ -185,11 +187,9 @@ function App() {
           lang={lang} L={L}
           selections={selections}
           courseOrder={courseOrder}
-          selectedPlaces={selectedPlaces}  // ← 순서 그대로 전달
+          selectedPlaces={selectedPlaces}
           onRestart={restart}
           onBack={() => {
-            const lastType = courseOrder[courseOrder.length - 1]
-            setCurrentOrderIndex(courseOrder.length - 1)
             setSelectedPlaces(prev => prev.slice(0, -1))
             setStep(4 + courseOrder.length)
           }}

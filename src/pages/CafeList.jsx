@@ -1,27 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { C } from './LandingPage'
 import { PlacePopup, priceLabel } from '../components/PlacePopup'
 
 const TYPE_TAG_MAP = {
-  japanese_restaurant:      { de: '🇯🇵 Japanisch',     en: '🇯🇵 Japanese' },
-  ramen_restaurant:         { de: '🍜 Ramen',           en: '🍜 Ramen' },
-  sushi_restaurant:         { de: '🍣 Sushi',           en: '🍣 Sushi' },
-  korean_restaurant:        { de: '🇰🇷 Koreanisch',     en: '🇰🇷 Korean' },
-  chinese_restaurant:       { de: '🇨🇳 Chinesisch',     en: '🇨🇳 Chinese' },
-  thai_restaurant:          { de: '🇹🇭 Thailändisch',   en: '🇹🇭 Thai' },
-  vietnamese_restaurant:    { de: '🇻🇳 Vietnamesisch',  en: '🇻🇳 Vietnamese' },
-  indian_restaurant:        { de: '🇮🇳 Indisch',        en: '🇮🇳 Indian' },
-  italian_restaurant:       { de: '🇮🇹 Italienisch',    en: '🇮🇹 Italian' },
-  french_restaurant:        { de: '🇫🇷 Französisch',    en: '🇫🇷 French' },
-  turkish_restaurant:       { de: '🇹🇷 Türkisch',       en: '🇹🇷 Turkish' },
-  greek_restaurant:         { de: '🇬🇷 Griechisch',     en: '🇬🇷 Greek' },
-  mediterranean_restaurant: { de: '🫒 Mediterran',      en: '🫒 Mediterranean' },
-  american_restaurant:      { de: '🍔 Amerikanisch',    en: '🍔 American' },
-  hamburger_restaurant:     { de: '🍔 Burger',          en: '🍔 Burger' },
-  steak_house:              { de: '🥩 Steakhouse',      en: '🥩 Steakhouse' },
-  seafood_restaurant:       { de: '🦞 Meeresfrüchte',   en: '🦞 Seafood' },
-  vegan_restaurant:         { de: '🌱 Vegan',           en: '🌱 Vegan' },
-  vegetarian_restaurant:    { de: '🥗 Vegetarisch',     en: '🥗 Vegetarian' },
   bakery:                   { de: '🥐 Bäckerei',        en: '🥐 Bakery' },
   coffee_shop:              { de: '☕ Coffee',           en: '☕ Coffee' },
   cafe:                     { de: '☕ Café',             en: '☕ Café' },
@@ -52,41 +33,50 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
   const [popupStation, setPopupStation] = useState(null)
   const [sortBy, setSortBy] = useState('rating')
   const [radius, setRadius] = useState(1000)
-  const ref = referencePoint || selections.hotspot
 
-  const isBar     = type === 'bar'
-  const emoji     = isBar ? '🍺' : '☕'
-  const title     = isBar ? 'Bar' : 'Café'
-  const walkLabel = lang === 'de' ? 'zu Fuß' : 'walk'
+  // type과 radius를 ref로도 추적해서 레이스 컨디션 방지
+  const currentType = useRef(type)
+  const currentRadius = useRef(1000)
+
+  const ref = referencePoint || selections.hotspot
+  const isBar      = type === 'bar'
+  const emoji      = isBar ? '🍺' : '☕'
+  const title      = isBar ? 'Bar' : 'Café'
+  const walkLabel  = lang === 'de' ? 'zu Fuß' : 'walk'
   const sortLabels = lang === 'de'
     ? { rating: 'Bewertung', reviews: 'Rezensionen', distance: 'Entfernung' }
     : { rating: 'Rating', reviews: 'Reviews', distance: 'Distance' }
-  const loadingText = isBar
-    ? (lang === 'de' ? 'Suche Bars...' : 'Finding bars...')
-    : (lang === 'de' ? 'Suche Cafés...' : 'Finding cafés...')
 
-  // type이나 radius 바뀔 때마다 새로 검색
-  const fetchPlaces = async (r, t) => {
+  // 단일 fetch 함수 — type과 radius를 직접 인자로 받음
+  const doFetch = async (fetchType, fetchRadius) => {
     if (!ref?.lat) return
-    const cuisine = t === 'cafe' ? (selections.cafeCuisine || 'all') : (selections.barCuisine || 'all')
+    const cuisine = fetchType === 'cafe'
+      ? (selections.cafeCuisine || 'all')
+      : (selections.barCuisine || 'all')
     const cuisineParam = cuisine && cuisine !== 'all' ? `&cuisine=${cuisine}` : ''
-    const url = `/api/places/search?type=${t}&lat=${ref.lat}&lng=${ref.lng}&radius=${r}${cuisineParam}`
+    const url = `/api/places/search?type=${fetchType}&lat=${ref.lat}&lng=${ref.lng}&radius=${fetchRadius}${cuisineParam}`
+    console.log(`[CafeList] fetch: type=${fetchType} radius=${fetchRadius} url=${url}`)
     const res = await fetch(url)
     const data = await res.json()
-    setPlaces((data.places || []).map(p => ({
+    return (data.places || []).map(p => ({
       ...p, distanceMeters: haversineDistance(ref.lat, ref.lng, p.lat, p.lng)
-    })))
+    }))
   }
 
+  // type 또는 radius 바뀔 때 항상 새로 fetch
   useEffect(() => {
+    currentType.current = type
+    currentRadius.current = radius
     setLoading(true)
-    fetchPlaces(1000, type).finally(() => setLoading(false))
-  }, [type]) // type 바뀌면 무조건 새로 검색
-
-  useEffect(() => {
-    setLoading(true)
-    fetchPlaces(radius, type).finally(() => setLoading(false))
-  }, [radius])
+    setPlaces([])
+    doFetch(type, radius).then(results => {
+      // 응답이 왔을 때 type/radius가 여전히 현재 값인지 확인 (레이스 컨디션 방지)
+      if (currentType.current === type && currentRadius.current === radius) {
+        setPlaces(results || [])
+        setLoading(false)
+      }
+    }).catch(() => setLoading(false))
+  }, [type, radius]) // type이나 radius 중 하나라도 바뀌면 무조건 새로 fetch
 
   const sorted = [...places].sort((a, b) => {
     if (sortBy === 'rating')  return ((b.rating||0)*Math.log10((b.userRatingsTotal||0)+10)) - ((a.rating||0)*Math.log10((a.userRatingsTotal||0)+10))
@@ -94,8 +84,11 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
     return (a.distanceMeters||9999) - (b.distanceMeters||9999)
   })
 
-  const spotName = lang === 'de' ? ref?.name_de : ref?.name_en
+  const spotName    = lang === 'de' ? ref?.name_de : ref?.name_en
   const displayName = spotName || ref?.name || ''
+  const loadingText = isBar
+    ? (lang === 'de' ? 'Suche Bars...' : 'Finding bars...')
+    : (lang === 'de' ? 'Suche Cafés...' : 'Finding cafés...')
 
   return (
     <div style={{ background:C.bg, minHeight:'100vh', fontFamily:"'Outfit',sans-serif", paddingBottom:'40px' }}>
@@ -111,28 +104,16 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
         <p style={{ color:C.textSub, fontSize:'13px', fontWeight:'300', textAlign:'center', margin:'0 0 16px' }}>{displayName}</p>
       </div>
 
-      {/* 탭 — 가로 스크롤 */}
-      <div style={{ paddingLeft:'20px', paddingRight:'20px', paddingBottom:'8px' }}>
-        <div style={{
-          display:'flex', gap:'6px',
-          overflowX:'scroll',
-          WebkitOverflowScrolling:'touch',
-          scrollbarWidth:'none',
-          msOverflowStyle:'none',
-        }}>
-          {[
-            ['rating',   sortLabels.rating],
-            ['reviews',  sortLabels.reviews],
-            ['distance', sortLabels.distance],
-          ].map(([k, label]) => (
+      {/* 탭 */}
+      <div style={{ padding:'0 20px 8px' }}>
+        <div style={{ display:'flex', gap:'6px', overflowX:'scroll', WebkitOverflowScrolling:'touch', scrollbarWidth:'none', msOverflowStyle:'none' }}>
+          {[['rating', sortLabels.rating], ['reviews', sortLabels.reviews], ['distance', sortLabels.distance]].map(([k, label]) => (
             <button key={k} onClick={() => setSortBy(k)} className="no-orange-card"
               style={{ padding:'7px 14px', borderRadius:'20px', border:`1px solid ${sortBy===k ? C.gold : C.border}`, background:sortBy===k ? C.surface2 : C.surface, color:sortBy===k ? C.gold : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
               {label}
             </button>
           ))}
-
           <div style={{ width:'1px', background:C.border, margin:'2px 4px', flexShrink:0 }} />
-
           {[[1000,'1km'],[3000,'3km'],[5000,'5km']].map(([r, label]) => (
             <button key={r} onClick={() => setRadius(r)} className="no-orange-card"
               style={{ padding:'7px 14px', borderRadius:'20px', border:`1px solid ${radius===r ? C.gold : C.border}`, background:radius===r ? C.gold : C.surface, color:radius===r ? C.bg : C.textSub, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0, fontWeight:radius===r ? '600' : '400' }}>
@@ -165,7 +146,9 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
             style={{ display:'flex', alignItems:'center', gap:'12px', padding:'14px', borderRadius:'16px', border:`1.5px solid ${C.border}`, background:C.surface, cursor:'pointer', textAlign:'left', width:'100%', boxShadow:'0 2px 8px rgba(0,0,0,0.03)' }}>
             <div style={{ width:'24px', height:'24px', borderRadius:'50%', background:i<3?C.gold:C.surface2, color:i<3?C.bg:C.textSub, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'600', flexShrink:0 }}>{i+1}</div>
             <div style={{ width:'64px', height:'64px', borderRadius:'10px', overflow:'hidden', flexShrink:0, background:C.surface2, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              {p.photoUrl ? <img src={p.photoUrl} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e=>e.target.style.display='none'} /> : <span style={{ fontSize:'24px' }}>{emoji}</span>}
+              {p.photoUrl
+                ? <img src={p.photoUrl} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e=>e.target.style.display='none'} />
+                : <span style={{ fontSize:'24px' }}>{emoji}</span>}
             </div>
             <div style={{ flex:1, minWidth:0 }}>
               <p style={{ fontWeight:'400', fontSize:'14px', color:C.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', margin:0 }}>{p.name}</p>
