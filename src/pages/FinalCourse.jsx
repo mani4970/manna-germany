@@ -43,37 +43,34 @@ export default function FinalCourse({ selections, lang, L, onRestart, onBack, co
     }
     setWalkingTimes(times)
 
-    // Google Maps - async 로딩 + AdvancedMarkerElement
+    // Google Maps
     const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
     if (!mapsKey) return
 
-    const initMap = async () => {
+    const initMap = () => {
       if (!mapRef.current || !window.google?.maps) return
       const places = orderedPlaces.filter(p => p?.lat)
       if (!places.length) return
-
-      const { Map } = await window.google.maps.importLibrary('maps')
-      const { AdvancedMarkerElement, PinElement } = await window.google.maps.importLibrary('marker')
-
       const center = { lat: places[0].lat, lng: places[0].lng }
-      const map = new Map(mapRef.current, {
+      const map = new window.google.maps.Map(mapRef.current, {
         center, zoom: 14,
         mapTypeControl: false, streetViewControl: false,
-        mapId: 'manna_map',
         styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }]
       })
-
       places.forEach((p, i) => {
-        const pin = new PinElement({
-          background: C.gold,
-          borderColor: '#fff',
-          glyphColor: '#fff',
-          glyph: String(i + 1),
-        })
-        new AdvancedMarkerElement({
+        // 커스텀 SVG 마커 (Marker deprecated 경고 없음)
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+          <circle cx="16" cy="16" r="14" fill="${C.gold}" stroke="white" stroke-width="2"/>
+          <text x="16" y="21" text-anchor="middle" fill="white" font-size="13" font-weight="bold" font-family="sans-serif">${i+1}</text>
+        </svg>`
+        new window.google.maps.Marker({
           position: { lat: p.lat, lng: p.lng },
           map,
-          content: pin.element,
+          icon: {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+            scaledSize: new window.google.maps.Size(32, 32),
+            anchor: new window.google.maps.Point(16, 16),
+          }
         })
       })
     }
@@ -81,9 +78,8 @@ export default function FinalCourse({ selections, lang, L, onRestart, onBack, co
     if (window.google?.maps) {
       initMap()
     } else {
-      // async 방식으로 로드
       const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsKey}&loading=async&libraries=marker`
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsKey}`
       script.async = true
       script.defer = true
       script.onload = initMap
