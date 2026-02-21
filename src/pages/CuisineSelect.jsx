@@ -3,26 +3,33 @@ import { C } from './LandingPage'
 
 const CUISINE_OPTIONS = {
   restaurant: [
-    { id: 'all', emoji: '🍴', label_de: 'Alles', label_en: 'All' },
-    { id: 'german', emoji: '🥨', label_de: 'Deutsch', label_en: 'German' },
-    { id: 'italian', emoji: '🍝', label_de: 'Italienisch', label_en: 'Italian' },
-    { id: 'asian', emoji: '🍜', label_de: 'Asiatisch', label_en: 'Asian' },
-    { id: 'turkish', emoji: '🥙', label_de: 'Türkisch', label_en: 'Turkish' },
-    { id: 'french', emoji: '🥐', label_de: 'Französisch', label_en: 'French' },
-    { id: 'american', emoji: '🍔', label_de: 'Amerikanisch', label_en: 'American' },
-    { id: 'mediterranean', emoji: '🫒', label_de: 'Mediterran', label_en: 'Mediterranean' },
+    { id: 'all',           emoji: '🍴', label_de: 'Alles',          label_en: 'All' },
+    { id: 'german',        emoji: '🥨', label_de: 'Deutsch',         label_en: 'German' },
+    { id: 'italian',       emoji: '🍝', label_de: 'Italienisch',     label_en: 'Italian' },
+    { id: 'asian',         emoji: '🍜', label_de: 'Asiatisch',       label_en: 'Asian' },
+    { id: 'turkish',       emoji: '🥙', label_de: 'Türkisch',        label_en: 'Turkish' },
+    { id: 'french',        emoji: '🥐', label_de: 'Französisch',     label_en: 'French' },
+    { id: 'american',      emoji: '🍔', label_de: 'Amerikanisch',    label_en: 'American' },
+    { id: 'mediterranean', emoji: '🫒', label_de: 'Mediterran',      label_en: 'Mediterranean' },
+    { id: 'steakhouse',    emoji: '🥩', label_de: 'Steakhouse',      label_en: 'Steakhouse' },
+    { id: 'seafood',       emoji: '🦞', label_de: 'Meeresfrüchte',   label_en: 'Seafood' },
+    { id: 'vegetarian',    emoji: '🥗', label_de: 'Vegetarisch',     label_en: 'Vegetarian' },
+    { id: 'pizza',         emoji: '🍕', label_de: 'Pizza',           label_en: 'Pizza' },
   ],
   cafe: [
-    { id: 'all', emoji: '☕', label_de: 'Alles', label_en: 'All' },
-    { id: 'specialty', emoji: '🫘', label_de: 'Specialty', label_en: 'Specialty' },
-    { id: 'bakery', emoji: '🥐', label_de: 'Bäckerei', label_en: 'Bakery' },
-    { id: 'brunch', emoji: '🍳', label_de: 'Brunch', label_en: 'Brunch' },
+    { id: 'all',           emoji: '☕', label_de: 'Alles',           label_en: 'All' },
+    { id: 'specialty',     emoji: '🫘', label_de: 'Specialty Coffee', label_en: 'Specialty Coffee' },
+    { id: 'bakery',        emoji: '🥐', label_de: 'Bäckerei & Café', label_en: 'Bakery & Café' },
+    { id: 'brunch',        emoji: '🍳', label_de: 'Brunch',          label_en: 'Brunch' },
+    { id: 'kuchen',        emoji: '🎂', label_de: 'Kuchen & Torte',  label_en: 'Cake & Pastry' },
   ],
   bar: [
-    { id: 'all', emoji: '🍺', label_de: 'Alles', label_en: 'All' },
-    { id: 'cocktail', emoji: '🍸', label_de: 'Cocktailbar', label_en: 'Cocktail Bar' },
-    { id: 'wine', emoji: '🍷', label_de: 'Weinbar', label_en: 'Wine Bar' },
-    { id: 'craft_beer', emoji: '🍻', label_de: 'Craft Beer', label_en: 'Craft Beer' },
+    { id: 'all',           emoji: '🍺', label_de: 'Alles',           label_en: 'All' },
+    { id: 'cocktail',      emoji: '🍸', label_de: 'Cocktailbar',     label_en: 'Cocktail Bar' },
+    { id: 'wine',          emoji: '🍷', label_de: 'Weinbar',         label_en: 'Wine Bar' },
+    { id: 'craft_beer',    emoji: '🍻', label_de: 'Craft Beer',      label_en: 'Craft Beer' },
+    { id: 'biergarten',    emoji: '🌿', label_de: 'Biergarten',      label_en: 'Beer Garden' },
+    { id: 'rooftop',       emoji: '🌆', label_de: 'Rooftop Bar',     label_en: 'Rooftop Bar' },
   ],
 }
 
@@ -67,12 +74,12 @@ export default function CuisineSelect({ lang, L, selections, onNext, onBack, onH
       </div>
 
       <div style={{ padding: '24px' }}>
-        {uniqueTypes.map((type, si) => {
+        {uniqueTypes.map((type) => {
           const options = CUISINE_OPTIONS[type] || []
           const key = sectionKey(type)
           const orderNums = courseOrder.reduce((acc, t, i) => { if (t === type) acc.push(i + 1); return acc }, [])
           return (
-            <div key={type} style={{ marginBottom: '24px' }}>
+            <div key={type} style={{ marginBottom: '28px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 {orderNums.map(n => (
                   <div key={n} style={{

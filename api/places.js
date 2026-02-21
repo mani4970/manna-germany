@@ -102,20 +102,36 @@ export default async function handler(req) {
     // cuisine 파라미터로 includedTypes 세분화
     const cuisine = searchParams.get('cuisine')
     const cuisineTypeMap = {
-      german: ['restaurant'],
-      italian: ['italian_restaurant'],
-      asian: ['chinese_restaurant', 'japanese_restaurant', 'korean_restaurant', 'asian_restaurant'],
-      turkish: ['turkish_restaurant'],
-      french: ['french_restaurant'],
-      american: ['american_restaurant'],
+      // Restaurant
+      german:        ['restaurant'],
+      italian:       ['italian_restaurant'],
+      asian:         ['chinese_restaurant', 'japanese_restaurant', 'asian_restaurant', 'ramen_restaurant'],
+      turkish:       ['turkish_restaurant'],
+      french:        ['french_restaurant'],
+      american:      ['american_restaurant', 'hamburger_restaurant'],
       mediterranean: ['mediterranean_restaurant', 'greek_restaurant'],
+      steakhouse:    ['steak_house'],
+      seafood:       ['seafood_restaurant'],
+      vegetarian:    ['vegan_restaurant', 'vegetarian_restaurant'],
+      pizza:         ['pizza_restaurant'],
+      // Cafe
+      specialty:     ['coffee_shop', 'cafe'],
+      bakery:        ['bakery'],
+      brunch:        ['brunch_restaurant', 'breakfast_restaurant'],
+      kuchen:        ['bakery', 'dessert_shop', 'cafe'],
+      // Bar
+      cocktail:      ['bar', 'cocktail_bar'],
+      wine:          ['wine_bar'],
+      craft_beer:    ['bar'],
+      biergarten:    ['bar'],
+      rooftop:       ['bar', 'rooftop_bar'],
     }
     const typeMap = {
       restaurant: ['restaurant'],
       cafe: ['cafe', 'coffee_shop', 'bakery'],
       bar: ['bar', 'night_club'],
     }
-    const includedTypes = (type === 'restaurant' && cuisine && cuisineTypeMap[cuisine])
+    const includedTypes = (cuisine && cuisine !== 'all' && cuisineTypeMap[cuisine])
       ? cuisineTypeMap[cuisine]
       : (typeMap[type] || ['restaurant'])
 

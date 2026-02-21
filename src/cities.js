@@ -94,4 +94,23 @@ export const CITIES = [
       { id: 'westend', lat: 50.1183, lng: 8.6661, name_de: 'Westend', name_en: 'Westend', sub_de: 'Gehoben · Restaurants · Grüneburgpark', sub_en: 'Upscale · Restaurants · Grüneburgpark' },
     ]
   },
+  ,
+  {
+    id: 'dusseldorf', emoji: '🎨', lat: 51.2217, lng: 6.7762,
+    name_de: 'Düsseldorf', name_en: 'Düsseldorf',
+    sub_de: 'Mode · Kunst · Rhein',
+    sub_en: 'Fashion · Art · Rhine',
+    landmarks: [
+      { id: 'koenigsallee', lat: 51.2204, lng: 6.7791, name_de: 'Königsallee', name_en: 'Königsallee', sub_de: 'Luxus · Shopping · Kö', sub_en: 'Luxury · Shopping · Kö' },
+      { id: 'rheinuferpromenade', lat: 51.2254, lng: 6.7731, name_de: 'Rheinuferpromenade', name_en: 'Rhine Promenade', sub_de: 'Spazieren · Aussicht · Altstadt', sub_en: 'Walk · Views · Old Town' },
+      { id: 'medienhafen', lat: 51.2130, lng: 6.7651, name_de: 'Medienhafen', name_en: 'Media Harbor', sub_de: 'Architektur · Restaurants · Bars', sub_en: 'Architecture · Restaurants · Bars' },
+      { id: 'altstadt', lat: 51.2254, lng: 6.7726, name_de: 'Altstadt', name_en: 'Old Town', sub_de: 'Längste Theke · Bars · Belebte Gassen', sub_en: 'Longest Bar · Pubs · Lively Lanes' },
+    ],
+    stadtteile: [
+      { id: 'pempelfort', lat: 51.2333, lng: 6.7833, name_de: 'Pempelfort', name_en: 'Pempelfort', sub_de: 'Schick · Cafés · Nordstraße', sub_en: 'Chic · Cafés · Nordstraße' },
+      { id: 'flingern', lat: 51.2256, lng: 6.8078, name_de: 'Flingern', name_en: 'Flingern', sub_de: 'Hip · Bars · Ackerstraße', sub_en: 'Hip · Bars · Ackerstraße' },
+      { id: 'bilk', lat: 51.2069, lng: 6.7742, name_de: 'Bilk', name_en: 'Bilk', sub_de: 'Studenten · Cafés · Lokal', sub_en: 'Students · Cafés · Local' },
+      { id: 'unterbilk', lat: 51.2097, lng: 6.7678, name_de: 'Unterbilk', name_en: 'Unterbilk', sub_de: 'Lebendig · Restaurants · Kiefernstraße', sub_en: 'Vibrant · Restaurants · Kiefernstraße' },
+    ]
+  },
 ]
