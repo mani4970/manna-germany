@@ -1,8 +1,7 @@
 export const LANG = {
   de: {
     tagline: 'Gutes Essen · Gute Menschen · Gute Begegnungen',
-    btn_guided: 'Empfehlung erhalten',
-    btn_direct: 'Ort direkt suchen',
+    btn_guided: 'Stadt auswählen',
     no_signup: 'Ohne Anmeldung · Komplett kostenlos',
     preview_label: 'Kursbeispiel',
     features_title: 'Warum Manna?',
@@ -56,8 +55,7 @@ export const LANG = {
   },
   en: {
     tagline: 'Good Food · Good People · Good Meetings',
-    btn_guided: 'Get Recommendations',
-    btn_direct: 'Search a Place Directly',
+    btn_guided: 'Choose a city',
     no_signup: 'No signup needed · Completely free',
     preview_label: 'Course Example',
     features_title: 'Why Manna?',

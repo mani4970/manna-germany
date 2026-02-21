@@ -7,7 +7,6 @@ import CuisineSelect from './pages/CuisineSelect'
 import RestaurantList from './pages/RestaurantList'
 import CafeList from './pages/CafeList'
 import FinalCourse from './pages/FinalCourse'
-import DirectInput from './pages/DirectInput'
 import { LANG } from './lang'
 import './App.css'
 
@@ -15,12 +14,13 @@ function App() {
   const [lang, setLang] = useState('de')
   const L = LANG[lang]
 
-  const [flowType, setFlowType] = useState(null)
+  const [flowType, setFlowType] = useState(null) // 'guided' | 'location'
   const [step, setStep] = useState(0)
-  const [directInputNextType, setDirectInputNextType] = useState(null)
   const [courseOrder, setCourseOrder] = useState([])
   const [currentOrderIndex, setCurrentOrderIndex] = useState(0)
   const [selectedPlaces, setSelectedPlaces] = useState([])
+  const [gpsError, setGpsError] = useState(null)
+  const [gpsLoading, setGpsLoading] = useState(false)
   const [selections, setSelections] = useState({
     city: null, hotspot: null,
     courseOrder: [],
@@ -43,23 +43,38 @@ function App() {
 
   const restart = () => {
     setStep(0); setFlowType(null)
-    setDirectInputNextType(null); setCourseOrder([])
-    setCurrentOrderIndex(0); setSelectedPlaces([])
+    setCourseOrder([]); setCurrentOrderIndex(0); setSelectedPlaces([])
+    setGpsError(null); setGpsLoading(false)
     setSelections({ city: null, hotspot: null, courseOrder: [], restaurantCuisine: 'all', cafeCuisine: 'all', barCuisine: 'all', restaurant: null, cafe: null, cafe2: null })
   }
 
-  function handleDirectInputSelect(data) {
-    setDirectInputNextType(data.nextType)
-    if (data.restaurant) {
-      setSelections(prev => ({ ...prev, restaurant: data.restaurant, hotspot: data.restaurant.hotspot || { name: 'Germany' } }))
-      if (data.nextType === 'cafe') { setStep(200) }
-      else if (data.nextType === 'bar') { setStep(202) }
-      else if (data.nextType === 'both') { setStep(200) }
-      else if (data.nextType === 'restaurant') { setStep(201) }
-    } else if (data.cafe) {
-      setSelections(prev => ({ ...prev, cafe: data.cafe, hotspot: data.cafe.hotspot || { name: 'Germany' } }))
-      setStep(201)
-    }
+  // GPS 위치 가져오기
+  const handleStartLocation = () => {
+    setGpsLoading(true)
+    setGpsError(null)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords
+        const hotspot = {
+          lat: latitude,
+          lng: longitude,
+          name: lang === 'de' ? 'Aktueller Standort' : 'Current Location',
+          name_de: 'Aktueller Standort',
+          name_en: 'Current Location',
+        }
+        setSelections(prev => ({ ...prev, hotspot }))
+        setFlowType('location')
+        setGpsLoading(false)
+        setStep(3) // CourseSelect로 바로 이동
+      },
+      (err) => {
+        setGpsLoading(false)
+        setGpsError(lang === 'de'
+          ? 'Standort konnte nicht ermittelt werden. Bitte Berechtigung erteilen.'
+          : 'Could not get location. Please allow location access.')
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    )
   }
 
   function handleCourseOrderSelect(data) {
@@ -88,43 +103,38 @@ function App() {
     return selectedPlaces[currentOrderIndex - 1]
   }
 
+  // step 번호 계산: guided는 1~4→리스트, location은 3→리스트
+  const listStepStart = flowType === 'guided' ? 5 : 5
+
   return (
     <div className="app">
+
+      {/* 랜딩 */}
       {step === 0 && (
         <LandingPage lang={lang} setLang={setLang} L={L}
           onStartGuided={() => { setFlowType('guided'); setStep(1) }}
-          onStartDirect={() => { setFlowType('direct'); setStep(50) }}
+          onStartLocation={handleStartLocation}
         />
       )}
 
-      {/* Direct flow */}
-      {flowType === 'direct' && step === 50 && (
-        <DirectInput lang={lang} L={L}
-          onNext={handleDirectInputSelect}
-          onBack={() => { setStep(0); setFlowType(null) }}
-          initialPlace={selections.restaurant || selections.cafe}
-        />
+      {/* GPS 로딩/에러 오버레이 */}
+      {gpsLoading && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(250,247,242,0.95)', zIndex:999, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', fontFamily:"'Outfit',sans-serif" }}>
+          <div style={{ fontSize:'32px' }}>📍</div>
+          <p style={{ color:'#8A8070', fontSize:'14px' }}>{lang === 'de' ? 'Standort wird ermittelt...' : 'Getting your location...'}</p>
+        </div>
       )}
-      {flowType === 'direct' && step === 200 && (
-        <CafeList lang={lang} L={L} selections={selections} type="cafe" referencePoint={selections.restaurant}
-          onNext={value => { update('cafe', value); directInputNextType === 'both' ? setStep(202) : setStep(100) }}
-          onBack={() => { update('cafe', null); setStep(50) }}
-        />
-      )}
-      {flowType === 'direct' && step === 201 && (
-        <RestaurantList lang={lang} L={L} selections={selections} referencePoint={selections.cafe}
-          onNext={value => { update('restaurant', value); setStep(100) }}
-          onBack={() => { update('restaurant', null); setStep(50) }}
-        />
-      )}
-      {flowType === 'direct' && step === 202 && (
-        <CafeList lang={lang} L={L} selections={selections} type="bar" referencePoint={selections.cafe}
-          onNext={value => { setSelections(prev => ({ ...prev, cafe2: value })); setStep(100) }}
-          onBack={() => { update('cafe2', null); directInputNextType === 'both' ? setStep(200) : setStep(50) }}
-        />
+      {gpsError && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(250,247,242,0.95)', zIndex:999, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', padding:'32px', fontFamily:"'Outfit',sans-serif", textAlign:'center' }}>
+          <div style={{ fontSize:'32px' }}>⚠️</div>
+          <p style={{ color:'#1A1714', fontSize:'15px' }}>{gpsError}</p>
+          <button onClick={() => { setGpsError(null) }} style={{ background:'#B89A6A', color:'#FAF7F2', border:'none', borderRadius:'12px', padding:'12px 24px', fontSize:'14px', cursor:'pointer' }}>
+            {lang === 'de' ? 'Zurück' : 'Back'}
+          </button>
+        </div>
       )}
 
-      {/* Guided flow - 4단계 */}
+      {/* Guided flow */}
       {flowType === 'guided' && step === 1 && (
         <CitySelect lang={lang} L={L}
           onNext={value => { update('city', value); next() }}
@@ -137,21 +147,30 @@ function App() {
           onBack={() => back(['city'])}
         />
       )}
-      {flowType === 'guided' && step === 3 && (
+
+      {/* 공통 - CourseSelect (guided: step3, location: step3) */}
+      {(flowType === 'guided' || flowType === 'location') && step === 3 && (
         <CourseSelect lang={lang} L={L} selections={selections}
           onNext={handleCourseOrderSelect}
-          onBack={() => back(['hotspot'])}
+          onBack={() => {
+            if (flowType === 'location') { restart() }
+            else back(['hotspot'])
+          }}
           onHome={restart}
         />
       )}
-      {flowType === 'guided' && step === 4 && (
+
+      {/* 공통 - CuisineSelect (step4) */}
+      {(flowType === 'guided' || flowType === 'location') && step === 4 && (
         <CuisineSelect lang={lang} L={L} selections={selections}
           onNext={value => { setSelections(value); next() }}
           onBack={() => { setCourseOrder([]); setCurrentOrderIndex(0); setSelectedPlaces([]); back(['courseOrder']) }}
           onHome={restart}
         />
       )}
-      {flowType === 'guided' && step >= 5 && step < 100 && (
+
+      {/* 리스트 (step 5+) */}
+      {(flowType === 'guided' || flowType === 'location') && step >= 5 && step < 100 && (
         <>
           {courseOrder[currentOrderIndex] === 'restaurant' && (
             <RestaurantList lang={lang} L={L} selections={selections} referencePoint={getReferencePoint()}
@@ -181,21 +200,18 @@ function App() {
         </>
       )}
 
+      {/* 결과 */}
       {step === 100 && (
         <FinalCourse lang={lang} L={L} selections={selections} onRestart={restart}
-          directInputOrder={flowType === 'direct' ? [] : null}
+          directInputOrder={null}
           onBack={() => {
-            if (flowType === 'direct') {
-              setSelections(prev => ({ ...prev, cafe: null, cafe2: null, restaurant: null })); setStep(50)
-            } else {
-              const lastType = courseOrder[courseOrder.length - 1]
-              if (lastType === 'restaurant') update('restaurant', null)
-              else if (lastType === 'cafe') update('cafe', null)
-              else if (lastType === 'bar') update('cafe2', null)
-              setCurrentOrderIndex(courseOrder.length - 1)
-              setSelectedPlaces(prev => prev.slice(0, -1))
-              setStep(4 + courseOrder.length)
-            }
+            const lastType = courseOrder[courseOrder.length - 1]
+            if (lastType === 'restaurant') update('restaurant', null)
+            else if (lastType === 'cafe') update('cafe', null)
+            else if (lastType === 'bar') update('cafe2', null)
+            setCurrentOrderIndex(courseOrder.length - 1)
+            setSelectedPlaces(prev => prev.slice(0, -1))
+            setStep(4 + courseOrder.length)
           }}
         />
       )}

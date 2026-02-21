@@ -70,7 +70,7 @@ const stepsDirect_en = [
   { num: '03', label: 'Tour complete', desc: 'Map + WhatsApp share' },
 ]
 
-export default function LandingPage({ lang, setLang, L, onStartGuided, onStartDirect }) {
+export default function LandingPage({ lang, setLang, L, onStartGuided, onStartLocation }) {
   const fadeUp = (delay = 0) => ({ animation: `fadeUp 0.6s ease ${delay}s both` })
   const stepsGuided = lang === 'de' ? stepsGuided_de : stepsGuided_en
   const stepsDirect = lang === 'de' ? stepsDirect_de : stepsDirect_en
@@ -118,18 +118,20 @@ export default function LandingPage({ lang, setLang, L, onStartGuided, onStartDi
               borderRadius: '14px', padding: '16px 24px',
               fontSize: '15px', fontWeight: '600', cursor: 'pointer',
               fontFamily: "'Outfit', sans-serif",
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             }}>
-            {L.btn_guided}
+            <span>🗺️</span> {lang === 'de' ? 'Stadt auswählen' : 'Choose a city'}
           </button>
-          <button onClick={onStartDirect} className="no-orange-card"
+          <button onClick={onStartLocation} className="no-orange-card"
             style={{
               background: C.surface, color: C.text,
               border: `1.5px solid ${C.border}`,
               borderRadius: '14px', padding: '16px 24px',
               fontSize: '15px', fontWeight: '400', cursor: 'pointer',
               fontFamily: "'Outfit', sans-serif",
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             }}>
-            {L.btn_direct}
+            <span>📍</span> {lang === 'de' ? 'Aktuellen Standort verwenden' : 'Use current location'}
           </button>
         </div>
         <p style={{ color: C.textDim, fontSize: '12px', marginTop: '16px', letterSpacing: '0.5px' }}>
@@ -254,15 +256,29 @@ export default function LandingPage({ lang, setLang, L, onStartGuided, onStartDi
           <p style={{ color: C.textSub, fontSize: '13px', marginBottom: '24px', lineHeight: '1.6', fontWeight: '300' }}>
             {lang === 'de' ? 'Plane deinen perfekten Abend in Deutschland' : 'Plan your perfect evening in Germany'}
           </p>
-          <button onClick={onStartGuided} className="no-orange-card"
-            style={{
-              background: C.gold, color: C.bg, border: 'none',
-              borderRadius: '14px', padding: '15px 32px',
-              fontSize: '15px', fontWeight: '600', cursor: 'pointer',
-              fontFamily: "'Outfit', sans-serif",
-            }}>
-            {L.btn_guided}
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <button onClick={onStartGuided} className="no-orange-card"
+              style={{
+                background: C.gold, color: C.bg, border: 'none',
+                borderRadius: '14px', padding: '15px 32px',
+                fontSize: '15px', fontWeight: '600', cursor: 'pointer',
+                fontFamily: "'Outfit', sans-serif",
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}>
+              <span>🗺️</span> {lang === 'de' ? 'Stadt auswählen' : 'Choose a city'}
+            </button>
+            <button onClick={onStartLocation} className="no-orange-card"
+              style={{
+                background: C.surface, color: C.text,
+                border: `1.5px solid ${C.border}`,
+                borderRadius: '14px', padding: '14px 32px',
+                fontSize: '14px', fontWeight: '400', cursor: 'pointer',
+                fontFamily: "'Outfit', sans-serif",
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}>
+              <span>📍</span> {lang === 'de' ? 'Aktuellen Standort verwenden' : 'Use current location'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

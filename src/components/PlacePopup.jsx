@@ -49,6 +49,7 @@ function getTodayHours(p) {
 export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const [details, setDetails] = useState(null)
+  const [touchStartX, setTouchStartX] = useState(null)
   const photos = place.photos?.length ? place.photos : (place.photoUrl ? [place.photoUrl] : [])
   const vibe = getVibeTag(place)
 
@@ -106,6 +107,16 @@ export function PlacePopup({ place, lang, L, onSelect, onClose, nearestStation }
             <img
               src={photos[photoIdx]} alt={place.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'opacity 0.3s' }}
+              onTouchStart={e => setTouchStartX(e.touches[0].clientX)}
+              onTouchEnd={e => {
+                if (touchStartX === null) return
+                const diff = touchStartX - e.changedTouches[0].clientX
+                if (Math.abs(diff) > 40) {
+                  if (diff > 0) setPhotoIdx(i => (i + 1) % photos.length)
+                  else setPhotoIdx(i => (i - 1 + photos.length) % photos.length)
+                }
+                setTouchStartX(null)
+              }}
             />
           ) : (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', color: C.textDim }}>🍽️</div>
