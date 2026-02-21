@@ -19,17 +19,14 @@ const CUISINE_OPTIONS = {
   cafe: [
     { id: 'all',           emoji: '☕', label_de: 'Alles',           label_en: 'All' },
     { id: 'specialty',     emoji: '🫘', label_de: 'Specialty Coffee', label_en: 'Specialty Coffee' },
-    { id: 'bakery',        emoji: '🥐', label_de: 'Bäckerei & Café', label_en: 'Bakery & Café' },
+    { id: 'dessert',       emoji: '🍰', label_de: 'Dessert & Kuchen', label_en: 'Dessert & Cake' },
     { id: 'brunch',        emoji: '🍳', label_de: 'Brunch',          label_en: 'Brunch' },
-    { id: 'kuchen',        emoji: '🎂', label_de: 'Kuchen & Torte',  label_en: 'Cake & Pastry' },
   ],
   bar: [
     { id: 'all',           emoji: '🍺', label_de: 'Alles',           label_en: 'All' },
     { id: 'cocktail',      emoji: '🍸', label_de: 'Cocktailbar',     label_en: 'Cocktail Bar' },
     { id: 'wine',          emoji: '🍷', label_de: 'Weinbar',         label_en: 'Wine Bar' },
     { id: 'craft_beer',    emoji: '🍻', label_de: 'Craft Beer',      label_en: 'Craft Beer' },
-    { id: 'biergarten',    emoji: '🌿', label_de: 'Biergarten',      label_en: 'Beer Garden' },
-    { id: 'rooftop',       emoji: '🌆', label_de: 'Rooftop Bar',     label_en: 'Rooftop Bar' },
   ],
 }
 
@@ -51,7 +48,6 @@ export default function CuisineSelect({ lang, L, selections, onNext, onBack, onH
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "'Outfit', sans-serif", paddingBottom: '120px' }}>
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600&display=swap" rel="stylesheet" />
 
       <div style={{ padding: '24px 24px 0' }}>
         <div style={{ paddingTop: '20px', textAlign: 'center' }}>
