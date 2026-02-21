@@ -12,6 +12,9 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 export default function CafeList({ lang, L, selections, type='cafe', referencePoint, onNext, onBack }) {
   const [places, setPlaces] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
+  const [offset, setOffset] = useState(0)
   const [sortBy, setSortBy] = useState('rating')
   const ref = referencePoint || selections.hotspot
   const isCafe = type === 'cafe'
@@ -19,16 +22,37 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
   const title = isCafe ? 'Café' : 'Bar'
   const loadingText = isCafe ? L.loading_cafe : L.loading_bar
 
-  useEffect(() => {
+  const fetchPlaces = async (currentOffset = 0, append = false) => {
     if (!ref?.lat) return
     const occasion = encodeURIComponent(selections.occasion || 'all')
     const budget = encodeURIComponent(selections.budget || 'all')
-    fetch(`/api/places/search?type=${type}&lat=${ref.lat}&lng=${ref.lng}&radius=1000&occasion=${occasion}&budget=${budget}`)
-      .then(r=>r.json()).then(data=>{
-        setPlaces((data.places||[]).map(p=>({...p, distanceMeters: haversineDistance(ref.lat,ref.lng,p.lat,p.lng)})))
-        setLoading(false)
-      }).catch(()=>setLoading(false))
+    const cuisine = type === 'cafe'
+      ? (selections.cafeCuisine || 'all')
+      : (selections.barCuisine || 'all')
+    const cuisineParam = cuisine && cuisine !== 'all' ? `&cuisine=${cuisine}` : ''
+    const url = `/api/places/search?type=${type}&lat=${ref.lat}&lng=${ref.lng}&radius=2000&occasion=${occasion}&budget=${budget}&offset=${currentOffset}${cuisineParam}`
+
+    try {
+      const res = await fetch(url)
+      const data = await res.json()
+      const newPlaces = (data.places || []).map(p => ({
+        ...p, distanceMeters: haversineDistance(ref.lat, ref.lng, p.lat, p.lng)
+      }))
+      setPlaces(prev => append ? [...prev, ...newPlaces] : newPlaces)
+      setHasMore(data.hasMore || false)
+      setOffset(currentOffset + newPlaces.length)
+    } catch (e) {}
+  }
+
+  useEffect(() => {
+    fetchPlaces(0, false).finally(() => setLoading(false))
   }, [])
+
+  const loadMore = async () => {
+    setLoadingMore(true)
+    await fetchPlaces(offset, true)
+    setLoadingMore(false)
+  }
 
   const sorted = [...places].sort((a,b)=>{
     if(sortBy==='rating') return ((b.rating||0)*Math.log10((b.userRatingsTotal||0)+10))-((a.rating||0)*Math.log10((a.userRatingsTotal||0)+10))
@@ -46,7 +70,7 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
         <div style={{ paddingTop: '20px' }}>
           <button onClick={onBack} className="no-orange-card" style={{ background:'none',border:'none',color:C.textSub,fontSize:'14px',cursor:'pointer',padding:'0 0 16px 0',display:'flex',alignItems:'center',gap:'4px' }}>{L.back}</button>
           <h1 style={{ fontSize:'22px',fontWeight:'300',color:C.text,letterSpacing:'-0.3px' }}>{emoji} {title}</h1>
-          <p style={{ color:C.textSub,marginTop:'4px',fontSize:'13px',fontWeight:'300' }}>{displayName} · {L.nearby}</p>
+          <p style={{ color:C.textSub,marginTop:'4px',fontSize:'13px',fontWeight:'300' }}>{displayName} · {lang==='de'?'2km Umgebung':'within 2km'}</p>
         </div>
       </div>
       <div style={{ display:'flex',gap:'8px',padding:'16px 24px',overflowX:'auto',scrollbarWidth:'none' }}>
@@ -62,20 +86,30 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
           <div style={{ textAlign:'center',padding:'60px 0',color:C.textSub }}>{loadingText}</div>
         ) : sorted.length === 0 ? (
           <div style={{ textAlign:'center',padding:'60px 0',color:C.textSub }}>{L.no_results}</div>
-        ) : sorted.map((p,i)=>(
-          <button key={p.placeId||i} onClick={()=>onNext(p)} className="no-orange-card"
-            style={{ display:'flex',alignItems:'center',gap:'12px',padding:'14px',borderRadius:'16px',border:`1.5px solid ${C.border}`,background:C.surface,cursor:'pointer',textAlign:'left',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,0.03)' }}>
-            <div style={{ width:'24px',height:'24px',borderRadius:'50%',background:i<3?C.gold:C.surface2,color:i<3?C.bg:C.textSub,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'11px',fontWeight:'600',flexShrink:0 }}>{i+1}</div>
-            <div style={{ width:'64px',height:'64px',borderRadius:'10px',overflow:'hidden',flexShrink:0,background:C.surface2,display:'flex',alignItems:'center',justifyContent:'center' }}>
-              {p.photoUrl?<img src={p.photoUrl} alt={p.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>e.target.style.display='none'}/>:<span style={{fontSize:'24px'}}>{emoji}</span>}
-            </div>
-            <div style={{ flex:1 }}>
-              <p style={{ fontWeight:'400',fontSize:'14px',color:C.text }}>{p.name}</p>
-              {p.rating&&<p style={{ color:C.goldDim,fontSize:'12px',marginTop:'2px' }}>⭐ {p.rating} ({p.userRatingsTotal?.toLocaleString()})</p>}
-              {p.distanceMeters&&<p style={{ color:C.textSub,fontSize:'11px',marginTop:'2px' }}>{p.distanceMeters}m · {Math.round(p.distanceMeters/80)} min {L.walk}</p>}
-            </div>
-          </button>
-        ))}
+        ) : (
+          <>
+            {sorted.map((p,i)=>(
+              <button key={p.placeId||i} onClick={()=>onNext(p)} className="no-orange-card"
+                style={{ display:'flex',alignItems:'center',gap:'12px',padding:'14px',borderRadius:'16px',border:`1.5px solid ${C.border}`,background:C.surface,cursor:'pointer',textAlign:'left',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,0.03)' }}>
+                <div style={{ width:'24px',height:'24px',borderRadius:'50%',background:i<3?C.gold:C.surface2,color:i<3?C.bg:C.textSub,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'11px',fontWeight:'600',flexShrink:0 }}>{i+1}</div>
+                <div style={{ width:'64px',height:'64px',borderRadius:'10px',overflow:'hidden',flexShrink:0,background:C.surface2,display:'flex',alignItems:'center',justifyContent:'center' }}>
+                  {p.photoUrl?<img src={p.photoUrl} alt={p.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>e.target.style.display='none'}/>:<span style={{fontSize:'24px'}}>{emoji}</span>}
+                </div>
+                <div style={{ flex:1 }}>
+                  <p style={{ fontWeight:'400',fontSize:'14px',color:C.text }}>{p.name}</p>
+                  {p.rating&&<p style={{ color:C.goldDim,fontSize:'12px',marginTop:'2px' }}>⭐ {p.rating} ({p.userRatingsTotal?.toLocaleString()})</p>}
+                  {p.distanceMeters&&<p style={{ color:C.textSub,fontSize:'11px',marginTop:'2px' }}>{p.distanceMeters}m · {Math.round(p.distanceMeters/80)} min {L.walk}</p>}
+                </div>
+              </button>
+            ))}
+            {hasMore && (
+              <button onClick={loadMore} className="no-orange-card"
+                style={{ width:'100%',padding:'14px',borderRadius:'14px',border:`1.5px solid ${C.border}`,background:C.surface,color:C.gold,fontSize:'14px',fontWeight:'400',cursor:'pointer',marginTop:'4px' }}>
+                {loadingMore ? '...' : (lang==='de' ? 'Mehr anzeigen' : 'Show more')}
+              </button>
+            )}
+          </>
+        )}
       </div>
     </div>
   )

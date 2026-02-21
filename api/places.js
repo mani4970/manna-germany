@@ -20,10 +20,11 @@ export default async function handler(req) {
     const type = searchParams.get('type')
     const lat = parseFloat(searchParams.get('lat'))
     const lng = parseFloat(searchParams.get('lng'))
-    const radius = parseInt(searchParams.get('radius')) || 1000
+    const radius = parseInt(searchParams.get('radius')) || 2000
     const query = searchParams.get('query')
     const occasion = searchParams.get('occasion') || 'all'
     const budget = searchParams.get('budget') || 'all'
+    const offset = parseInt(searchParams.get('offset')) || 0
 
     // ── 직접 검색 ──────────────────────────────────────────
     if (query) {
@@ -149,7 +150,7 @@ export default async function handler(req) {
         locationRestriction: {
           circle: { center: { latitude: lat, longitude: lng }, radius },
         },
-        maxResultCount: 20,
+        maxResultCount: 40,
         rankPreference: 'POPULARITY',
         languageCode: 'de',
         regionCode: 'DE',
@@ -245,7 +246,9 @@ export default async function handler(req) {
       return scoreB - scoreA
     })
 
-    return new Response(JSON.stringify({ places: sorted }), {
+    const total = sorted.length
+    const paginated = sorted.slice(offset, offset + 20)
+    return new Response(JSON.stringify({ places: paginated, total, hasMore: offset + 20 < total }), {
       headers: { 'Content-Type': 'application/json' },
     })
 
