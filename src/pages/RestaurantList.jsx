@@ -61,10 +61,10 @@ export default function RestaurantList({ lang, L, selections, referencePoint, on
     ? { rating: 'Bewertung', reviews: 'Rezensionen', distance: 'Entfernung' }
     : { rating: 'Rating',    reviews: 'Reviews',     distance: 'Distance' }
 
-  const fetchPlaces = async (seed = 0) => {
+  const fetchPlaces = async (seed = 0, r = radius) => {
     if (!ref?.lat) return
     const cuisine = selections.restaurantCuisine || 'all'
-    const base = `/api/places/search?type=restaurant&lat=${ref.lat}&lng=${ref.lng}&radius=${radius}&seed=${seed}`
+    const base = `/api/places/search?type=restaurant&lat=${ref.lat}&lng=${ref.lng}&radius=${r}&seed=${seed}`
     const url = cuisine && cuisine !== 'all' ? `${base}&cuisine=${cuisine}` : base
     const res = await fetch(url)
     const data = await res.json()
@@ -73,12 +73,10 @@ export default function RestaurantList({ lang, L, selections, referencePoint, on
     })))
   }
 
-  useEffect(() => { fetchPlaces(0).finally(() => setLoading(false)) }, [])
+  useEffect(() => { fetchPlaces(0, 1000).finally(() => setLoading(false)) }, [])
   useEffect(() => {
-    if (!loading) {
-      setLoading(true)
-      fetchPlaces(0).finally(() => setLoading(false))
-    }
+    setLoading(true)
+    fetchPlaces(0, radius).finally(() => setLoading(false))
   }, [radius])
 
 

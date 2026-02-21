@@ -66,11 +66,11 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
     : (lang === 'de' ? 'Suche Bars...'   : 'Finding bars...')
   const noResults = lang === 'de' ? 'Keine Ergebnisse gefunden' : 'No results found'
 
-  const fetchPlaces = async (seed = 0) => {
+  const fetchPlaces = async (seed = 0, r = radius) => {
     if (!ref?.lat) return
     const cuisine = type === 'cafe' ? (selections.cafeCuisine || 'all') : (selections.barCuisine || 'all')
     const cuisineParam = cuisine && cuisine !== 'all' ? `&cuisine=${cuisine}` : ''
-    const url = `/api/places/search?type=${type}&lat=${ref.lat}&lng=${ref.lng}&radius=${radius}&seed=${seed}${cuisineParam}`
+    const url = `/api/places/search?type=${type}&lat=${ref.lat}&lng=${ref.lng}&radius=${r}&seed=${seed}${cuisineParam}`
     const res = await fetch(url)
     const data = await res.json()
     setPlaces((data.places || []).map(p => ({
@@ -78,12 +78,10 @@ export default function CafeList({ lang, L, selections, type='cafe', referencePo
     })))
   }
 
-  useEffect(() => { fetchPlaces(0).finally(() => setLoading(false)) }, [])
+  useEffect(() => { fetchPlaces(0, 1000).finally(() => setLoading(false)) }, [])
   useEffect(() => {
-    if (!loading) {
-      setLoading(true)
-      fetchPlaces(0).finally(() => setLoading(false))
-    }
+    setLoading(true)
+    fetchPlaces(0, radius).finally(() => setLoading(false))
   }, [radius])
 
 
